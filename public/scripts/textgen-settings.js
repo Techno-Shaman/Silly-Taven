@@ -1312,6 +1312,7 @@ export function getTextGenGenerationData(finalPrompt, maxTokens, isImpersonate, 
             // Conflicts with ooba's grammar_string
             'grammar': settings.grammar_string,
             'cache_prompt': true,
+            'dry_sequence_breakers': JSON.parse(params.dry_sequence_breakers),
         };
         params = Object.assign(params, llamaCppParams);
     }
