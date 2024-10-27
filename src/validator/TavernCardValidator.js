@@ -32,20 +32,20 @@ class TavernCardValidator {
     validate() {
         this.#lastValidationError = null;
 
-        if (this.validateV1()) {
-            return 1;
-        }
-
-        if (this.validateV2()) {
-            return 2;
+        if (this.validatePromV3()) {
+            return 3.1;
         }
 
         if (this.validateV3()) {
             return 3;
         }
 
-        if (this.validatePromV3()) {
-            return 3.1;
+        if (this.validateV2()) {
+            return 2;
+        }
+
+        if (this.validateV1()) {
+            return 1;
         }
 
         return false;
