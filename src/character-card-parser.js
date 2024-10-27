@@ -1,8 +1,9 @@
-const fs = require('fs');
+import fs from 'node:fs';
+import { Buffer } from 'node:buffer';
 
-const encode = require('png-chunks-encode');
-const extract = require('png-chunks-extract');
-const PNGtext = require('png-chunk-text');
+import encode from 'png-chunks-encode';
+import extract from 'png-chunks-extract';
+import PNGtext from 'png-chunk-text';
 
 /**
  * Writes Character metadata to a PNG image buffer.
@@ -12,8 +13,8 @@ const PNGtext = require('png-chunk-text');
  * @param {boolean | undefined} prom Export as PromV3 ("3.1") instead of V3 (ccv3) + V2 (chara)
  * @returns {Buffer} PNG image buffer with metadata
  */
-const write = (image, data, prom) => {
-    const chunks = extract(image);
+export const write = (image, data, prom) => {
+    const chunks = extract(new Uint8Array(image));
     const tEXtChunks = chunks.filter(chunk => chunk.name === 'tEXt');
 
     // Remove existing tEXt chunks
@@ -41,9 +42,10 @@ const write = (image, data, prom) => {
             v3Data.spec = 'chara_card_v3';
             v3Data.spec_version = '3.0';
 
-            const base64EncodedData = Buffer.from(JSON.stringify(v3Data), 'utf8').toString('base64');
-            chunks.splice(-1, 0, PNGtext.encode('ccv3', base64EncodedData));
-        } catch (error) { }
+        const base64EncodedData = Buffer.from(JSON.stringify(v3Data), 'utf8').toString('base64');
+        chunks.splice(-1, 0, PNGtext.encode('ccv3', base64EncodedData));
+    } catch (error) {
+        // Ignore errors when adding v3 chunk
     }
 
     const newBuffer = Buffer.from(encode(chunks));
@@ -56,8 +58,8 @@ const write = (image, data, prom) => {
  * @param {Buffer} image PNG image buffer
  * @returns {string} Character data
  */
-const read = (image) => {
-    const chunks = extract(image);
+export const read = (image) => {
+    const chunks = extract(new Uint8Array(image));
 
     const textChunks = chunks.filter((chunk) => chunk.name === 'tEXt').map((chunk) => PNGtext.decode(chunk.data));
 
@@ -94,7 +96,7 @@ const read = (image) => {
  * @param {string} format File format
  * @returns {string} Character data
  */
-const parse = (cardUrl, format) => {
+export const parse = (cardUrl, format) => {
     let fileFormat = format === undefined ? 'png' : format;
 
     switch (fileFormat) {
@@ -107,8 +109,3 @@ const parse = (cardUrl, format) => {
     throw new Error('Unsupported format');
 };
 
-module.exports = {
-    parse,
-    write,
-    read,
-};

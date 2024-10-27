@@ -1,3 +1,5 @@
+import { Fuse, Handlebars } from '../lib.js';
+
 import {
     saveSettingsDebounced,
     scrollChatToBottom,
@@ -178,7 +180,6 @@ let power_user = {
     console_log_prompts: false,
     request_token_probabilities: false,
     show_group_chat_queue: false,
-    render_formulas: false,
     allow_name1_display: false,
     allow_name2_display: false,
     hotswap_enabled: true,
@@ -290,6 +291,7 @@ let power_user = {
     restore_user_input: true,
     reduced_motion: false,
     compact_input_area: true,
+    show_swipe_num_all_messages: false,
     auto_connect: false,
     auto_load_chat: false,
     forbid_external_media: true,
@@ -302,9 +304,6 @@ let movingUIPresets = [];
 export let context_presets = [];
 
 const storage_keys = {
-    auto_connect_legacy: 'AutoConnectEnabled',
-    auto_load_chat_legacy: 'AutoLoadChatEnabled',
-
     storyStringValidationCache: 'StoryStringValidationCache',
 };
 
@@ -467,6 +466,11 @@ function switchReducedMotion() {
 function switchCompactInputArea() {
     $('#send_form').toggleClass('compact', power_user.compact_input_area);
     $('#compact_input_area').prop('checked', power_user.compact_input_area);
+}
+
+export function switchSwipeNumAllMessages() {
+    $('#show_swipe_num_all_messages').prop('checked', power_user.show_swipe_num_all_messages);
+    $('.mes:not(.last_mes) .swipes-counter').css('opacity', '').toggle(power_user.show_swipe_num_all_messages);
 }
 
 var originalSliderValues = [];
@@ -1283,6 +1287,13 @@ function applyTheme(name) {
                 switchCompactInputArea();
             },
         },
+        {
+            key: 'show_swipe_num_all_messages',
+            action: () => {
+                $('#show_swipe_num_all_messages').prop('checked', power_user.show_swipe_num_all_messages);
+                switchSwipeNumAllMessages();
+            },
+        },
     ];
 
     for (const { key, selector, type, action } of themeProperties) {
@@ -1352,6 +1363,7 @@ function applyPowerUserSettings() {
     switchHideChatAvatars();
     switchTokenCount();
     switchMessageActions();
+    switchSwipeNumAllMessages();
 }
 
 function getExampleMessagesBehavior() {
@@ -1415,20 +1427,6 @@ async function loadPowerUserSettings(settings, data) {
         context_presets = data.context;
     }
 
-    // These are still local storage. Delete in 1.12.7
-    const autoLoadChat = localStorage.getItem(storage_keys.auto_load_chat_legacy);
-    const autoConnect = localStorage.getItem(storage_keys.auto_connect_legacy);
-
-    if (autoLoadChat) {
-        power_user.auto_load_chat = autoLoadChat === 'true';
-        localStorage.removeItem(storage_keys.auto_load_chat_legacy);
-    }
-
-    if (autoConnect) {
-        power_user.auto_connect = autoConnect === 'true';
-        localStorage.removeItem(storage_keys.auto_connect_legacy);
-    }
-
     if (power_user.chat_display === '') {
         power_user.chat_display = chat_styles.DEFAULT;
     }
@@ -1489,7 +1487,6 @@ async function loadPowerUserSettings(settings, data) {
     $('#collapse-newlines-checkbox').prop('checked', power_user.collapse_newlines);
     $('#always-force-name2-checkbox').prop('checked', power_user.always_force_name2);
     $('#trim_sentences_checkbox').prop('checked', power_user.trim_sentences);
-    $('#render_formulas').prop('checked', power_user.render_formulas);
     $('#disable_group_trimming').prop('checked', power_user.disable_group_trimming);
     $('#markdown_escape_strings').val(power_user.markdown_escape_strings);
     $('#fast_ui_mode').prop('checked', power_user.fast_ui_mode);
@@ -1596,7 +1593,7 @@ async function loadPowerUserSettings(settings, data) {
     $(`#character_sort_order option[data-order="${power_user.sort_order}"][data-field="${power_user.sort_field}"]`).prop('selected', true);
     switchReducedMotion();
     switchCompactInputArea();
-    reloadMarkdownProcessor(power_user.render_formulas);
+    reloadMarkdownProcessor();
     await loadInstructMode(data);
     await loadContextSettings();
     await loadSystemPrompts(data);
@@ -1826,7 +1823,7 @@ async function loadContextSettings() {
 /**
  * Fuzzy search characters by a search term
  * @param {string} searchValue - The search term
- * @returns {FuseResult[]} Results as items with their score
+ * @returns {import('fuse.js').FuseResult<any>[]} Results as items with their score
  */
 export function fuzzySearchCharacters(searchValue) {
     // @ts-ignore
@@ -1859,7 +1856,7 @@ export function fuzzySearchCharacters(searchValue) {
  * Fuzzy search world info entries by a search term
  * @param {*[]} data - WI items data array
  * @param {string} searchValue - The search term
- * @returns {FuseResult[]} Results as items with their score
+ * @returns {import('fuse.js').FuseResult<any>[]} Results as items with their score
  */
 export function fuzzySearchWorldInfo(data, searchValue) {
     // @ts-ignore
@@ -1888,7 +1885,7 @@ export function fuzzySearchWorldInfo(data, searchValue) {
  * Fuzzy search persona entries by a search term
  * @param {*[]} data - persona data array
  * @param {string} searchValue - The search term
- * @returns {FuseResult[]} Results as items with their score
+ * @returns {import('fuse.js').FuseResult<any>[]} Results as items with their score
  */
 export function fuzzySearchPersonas(data, searchValue) {
     data = data.map(x => ({ key: x, name: power_user.personas[x] ?? '', description: power_user.persona_descriptions[x]?.description ?? '' }));
@@ -1912,7 +1909,7 @@ export function fuzzySearchPersonas(data, searchValue) {
 /**
  * Fuzzy search tags by a search term
  * @param {string} searchValue - The search term
- * @returns {FuseResult[]} Results as items with their score
+ * @returns {import('fuse.js').FuseResult<any>[]} Results as items with their score
  */
 export function fuzzySearchTags(searchValue) {
     // @ts-ignore
@@ -1934,7 +1931,7 @@ export function fuzzySearchTags(searchValue) {
 /**
  * Fuzzy search groups by a search term
  * @param {string} searchValue - The search term
- * @returns {FuseResult[]} Results as items with their score
+ * @returns {import('fuse.js').FuseResult<any>[]} Results as items with their score
  */
 export function fuzzySearchGroups(searchValue) {
     // @ts-ignore
@@ -2296,6 +2293,7 @@ function getThemeObject(name) {
         zoomed_avatar_magnification: power_user.zoomed_avatar_magnification,
         reduced_motion: power_user.reduced_motion,
         compact_input_area: power_user.compact_input_area,
+        show_swipe_num_all_messages: power_user.show_swipe_num_all_messages,
     };
 }
 
@@ -3067,7 +3065,7 @@ $(document).ready(() => {
     $('#markdown_escape_strings').on('input', function () {
         power_user.markdown_escape_strings = String($(this).val());
         saveSettingsDebounced();
-        reloadMarkdownProcessor(power_user.render_formulas);
+        reloadMarkdownProcessor();
     });
 
     $('#start_reply_with').on('input', function () {
@@ -3419,13 +3417,6 @@ $(document).ready(() => {
         saveSettingsDebounced();
     });
 
-    $('#render_formulas').on('input', function () {
-        power_user.render_formulas = !!$(this).prop('checked');
-        reloadMarkdownProcessor(power_user.render_formulas);
-        reloadCurrentChat();
-        saveSettingsDebounced();
-    });
-
     $('#reload_chat').on('click', async function () {
         const currentChatId = getCurrentChatId();
         if (currentChatId !== undefined && currentChatId !== null) {
@@ -3752,6 +3743,12 @@ $(document).ready(() => {
     $('#compact_input_area').on('input', function () {
         power_user.compact_input_area = !!$(this).prop('checked');
         switchCompactInputArea();
+        saveSettingsDebounced();
+    });
+
+    $('#show_swipe_num_all_messages').on('input', function () {
+        power_user.show_swipe_num_all_messages = !!$(this).prop('checked');
+        switchSwipeNumAllMessages();
         saveSettingsDebounced();
     });
 

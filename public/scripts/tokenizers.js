@@ -1,3 +1,4 @@
+import { localforage } from '../lib.js';
 import { characters, main_api, api_server, nai_settings, online_status, this_chid } from '../script.js';
 import { power_user, registerDebugFunction } from './power-user.js';
 import { chat_completion_sources, model_list, oai_settings } from './openai.js';
@@ -135,7 +136,7 @@ const TOKENIZER_URLS = {
     },
 };
 
-const objectStore = new localforage.createInstance({ name: 'SillyTavern_ChatCompletions' });
+const objectStore = localforage.createInstance({ name: 'SillyTavern_ChatCompletions' });
 
 let tokenCache = {};
 
@@ -889,7 +890,6 @@ function getTextgenAPITokenizationParams(str) {
         text: str,
         api_type: textgen_settings.type,
         url: getTextGenServer(),
-        legacy_api: textgen_settings.legacy_api && textgen_settings.type === OOBA,
         vllm_model: textgen_settings.vllm_model,
         aphrodite_model: textgen_settings.aphrodite_model,
     };

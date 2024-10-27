@@ -1,3 +1,4 @@
+import { moment } from '../lib.js';
 import { registerDebugFunction } from './power-user.js';
 import { updateSecretDisplay } from './secrets.js';
 
@@ -215,6 +216,7 @@ function addLanguagesToDropdown() {
 }
 
 export async function initLocales() {
+    moment.locale(localeFile);
     langs = await fetch('/locales/lang.json').then(response => response.json());
     localeData = await getLocaleData(localeFile);
     applyLocale();

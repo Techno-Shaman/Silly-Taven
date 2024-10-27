@@ -5,7 +5,7 @@
  *
  * @link https://github.com/malfoyslastname/character-card-spec-v2
  */
-class TavernCardValidator {
+export class TavernCardValidator {
     /**
      * @type {string|null}
      */
@@ -208,5 +208,3 @@ class TavernCardValidator {
         return true;
     }
 }
-
-module.exports = { TavernCardValidator };
