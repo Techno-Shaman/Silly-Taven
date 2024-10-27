@@ -7868,8 +7868,9 @@ function addAlternateGreeting(template, greeting, index, getArray) {
 /**
  * Creates or edits a character based on the form data.
  * @param {Event} [e] Event that triggered the function call.
+ * @param {Number} [exportType] The export type to use when editing a character.
  */
-async function createOrEditCharacter(e) {
+async function createOrEditCharacter(e, exportType) {
     $('#rm_info_avatar').html('');
     const formData = new FormData($('#form_create').get(0));
     formData.set('fav', String(fav_ch_checked));
@@ -7979,7 +7980,6 @@ async function createOrEditCharacter(e) {
     } else {
         try {
             let url = '/api/characters/edit';
-            let specUrl = '/api/characters/get-spec';
 
             if (crop_data != undefined) {
                 url += `?crop=${encodeURIComponent(JSON.stringify(crop_data))}`;
@@ -7993,22 +7993,7 @@ async function createOrEditCharacter(e) {
                 }
             }
 
-            const specFormData = new FormData();
-            specFormData.append('avatar_url', formData.get('avatar_url'));
-
-            const specResult = await fetch(specUrl, {
-                method: 'POST',
-                headers: headers,
-                body: specFormData,
-                cache: 'no-cache',
-            });
-
-            if (!specResult.ok) {
-                throw new Error('Spec fetch result is not ok');
-            }
-
-            const specData = await specResult.json();
-            formData.append('spec_version', specData.spec_version);
+            formData.append('useProm', exportType.toString());
 
             const fetchResult = await fetch(url, {
                 method: 'POST',
@@ -10519,19 +10504,18 @@ jQuery(async function () {
             return;
         }
 
-        // Save before exporting
-        await createOrEditCharacter();
-
         const html = await renderTemplateAsync('exportFormat');
         const usePromValue = await callGenericPopup(html, POPUP_TYPE.CONFIRM, null, {okButton: 'Export as PromV3', customButtons: [t`Export as V2 + V3`], cancelButton: 'Cancel'}); 
         if (!usePromValue) {
             toastr.error('A export format must be selected.');
             return;
         }
-
         const useProm = usePromValue === 1;
-        const body = { format, avatar_url: characters[this_chid].avatar, useProm: useProm };
 
+        // Save with chosen format before exporting
+        await createOrEditCharacter(undefined, useProm);
+
+        const body = { format, avatar_url: characters[this_chid].avatar, useProm: useProm };
         const response = await fetch('/api/characters/export', {
             method: 'POST',
             headers: getRequestHeaders(),
