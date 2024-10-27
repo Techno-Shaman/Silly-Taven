@@ -331,7 +331,7 @@ function unsetFavFlag(char) {
  */
 function readFromPromV3(char) {
     if (_.isUndefined(char.data)) {
-        console.warn(`Char ${char['name']} is missing PromV3 data`);
+        console.warn(`Char is missing the PromV3 data field`);
         return char;
     }
 
@@ -459,11 +459,11 @@ function convertToPromV3(char, directories) {
     // Assume all greetings are solo greetings
     const greetings = { solo: [], group: [] };
     if (char.first_mes) greetings.solo.push(char.first_mes);
-
-    if (char.alternate_greetings) {
+    
+    if (char.alternate_greetings !== undefined) {
         if (Array.isArray(char.alternate_greetings)) greetings.solo.push(...char.alternate_greetings);
-        if (typeof char.alternate_greetings === 'string') greetings.solo.push(char.alternate_greetings);
-        console.warn(`Char ${char.name} has alternate greetings but of a unknown type. Skipping.`);
+        else if (typeof char.alternate_greetings === 'string') greetings.solo.push(char.alternate_greetings);
+        else console.warn(`Char ${char.ch_name} has alternate greetings but of a unknown type. Skipping.`);
     }
 
     // 2. Convert example messages to an array of 'CharacterExampleMessage' objects
@@ -474,28 +474,28 @@ function convertToPromV3(char, directories) {
 
     // 3. Convert metadata to 'CharacterInfo' object
     const metadata = {
-        creator: char.data.creator || '',
-        version: char.data.character_version || '',
+        creator: char.creator || '',
+        version: char.character_version || '',
         source: '',
-        creator_notes: char.data.creator_notes || '',
-        tags: char.data.tags ?? char.tags ?? [],
+        creator_notes: char.creator_notes || '',
+        tags: Array.isArray(char.tags) ? char.tags : [],
     }
 
     const result = charaFormatToPromV3({
         json_data: JSON.stringify(char),
-        ch_name: char.name,
+        ch_name: char.ch_name,
         description: char.description,
         personality: char.personality,
         greetings,
         exampleMessages,
-        system_prompt: char.data.system_prompt,
-        post_history_instructions: char.data.post_history_instructions,
-        talkativeness: char.data.extensions.talkativeness,
-        fav: char.data.extensions.fav,
-        world: char.data.extensions.world,
-        depth_prompt_prompt: char.data.extensions.depth_prompt.prompt,
-        depth_prompt_depth: char.data.extensions.depth_prompt.depth,
-        depth_prompt_role: char.data.extensions.depth_prompt.role,
+        system_prompt: char.system_prompt,
+        post_history_instructions: char.post_history_instructions,
+        talkativeness: char.talkativeness,
+        fav: char.fav,
+        world: char.world,
+        depth_prompt_prompt: char.depth_prompt_prompt,
+        depth_prompt_depth: char.depth_prompt_depth,
+        depth_prompt_role: char.depth_prompt_role,
         metadata,
     }, directories);
 
@@ -1159,7 +1159,7 @@ async function importFromPng(uploadPath, { request }, preservedFileName) {
     if (jsonData.type === 'chara_card') {
         console.log('Found a PromV3 character file.');
         jsonData = readFromPromV3(jsonData);
-        jsonData['create_date'] = humanizedISO8601DateTime();
+        jsonData['metadata']['created_on'] = humanizedISO8601DateTime();
         const char = JSON.stringify(jsonData);
         const result = await writeCharacterData(uploadPath, char, pngName, request, undefined, true);
         fs.unlinkSync(uploadPath);
@@ -1207,22 +1207,6 @@ async function importFromPng(uploadPath, { request }, preservedFileName) {
 }
 
 export const router = express.Router();
-
-// Returns the character spec version
-router.post('/get-spec', jsonParser, async function (request, response) {
-    if (!request.body || !request.body.avatar_url) {
-        return response.sendStatus(400);
-    }
-
-    const avatarPath = path.join(request.user.directories.characters, request.body.avatar_url);
-    const avatarData = await readCharacterData(avatarPath);
-    const specVersion = await getCharacterSpec(avatarData);
-
-    if (specVersion === undefined) {
-        return response.sendStatus(500);
-    }
-    return response.send({ spec_version: specVersion });
-})
 
 router.post('/create', urlencodedParser, async function (request, response) {
     try {
@@ -1316,11 +1300,31 @@ router.post('/edit', urlencodedParser, async function (request, response) {
         return;
     }
 
-    const useProm = request.body.exportType === 1
-
     var char 
+    let useProm = false;
+
+    const avatarPath = path.join(request.user.directories.characters, request.body.avatar_url);
+    const charJSON = await readCharacterData(avatarPath);
+    const specVersion = await getCharacterSpec(charJSON);
+
+    if (specVersion === undefined) {
+        console.error('Error: failed to get character spec version.');
+        response.status(500).send('Error: failed to get character spec version.');
+        return;
+    }
+
+    if (request.body.exportType) {
+        // use export type to save data
+        useProm = Number(request.body.exportType) === 1
+    } else {
+        // use card spec version to save data
+        useProm = specVersion === '3.1';
+    }
+
+    console.log(`Prom Status: ${useProm}`);
+
     if (useProm) {
-        char = getCharaPromV3(request.body, request.user.directories);
+        char = convertToPromV3(request.body, request.user.directories);
     } else {
         char = charaFormatData(request.body, request.user.directories);
     }
@@ -1332,7 +1336,6 @@ router.post('/edit', urlencodedParser, async function (request, response) {
 
     try {
         if (!request.file) {
-            const avatarPath = path.join(request.user.directories.characters, request.body.avatar_url);
             await writeCharacterData(avatarPath, char, targetFile, request, undefined, useProm);
         } else {
             const crop = tryParse(request.query.crop);
@@ -1380,6 +1383,7 @@ router.post('/edit-attribute', jsonParser, async function (request, response) {
         const char = JSON.parse(charJSON);
         const specVersion = await getCharacterSpec(charJSON);
         const useProm = specVersion === '3.1';
+
         //check if the field exists
         if (char[request.body.field] === undefined && char.data[request.body.field] === undefined) {
             console.error('Error: invalid field.');

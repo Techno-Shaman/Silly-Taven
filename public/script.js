@@ -8136,8 +8136,10 @@ async function createOrEditCharacter(e, exportType) {
                     formData.append('alternate_greetings', value);
                 }
             }
-
-            formData.append('useProm', exportType.toString());
+            
+            if (exportType !== undefined) {
+                formData.append('exportType', exportType.toString());
+            }
 
             const fetchResult = await fetch(url, {
                 method: 'POST',
@@ -10759,15 +10761,19 @@ jQuery(async function () {
         }
 
         const html = await renderTemplateAsync('exportFormat');
-        const usePromValue = await callGenericPopup(html, POPUP_TYPE.CONFIRM, null, {okButton: 'Export as PromV3', customButtons: [t`Export as V2 + V3`], cancelButton: 'Cancel'}); 
-        if (!usePromValue) {
-            toastr.error('A export format must be selected.');
+        const exportValue = await callGenericPopup(html, POPUP_TYPE.CONFIRM, null, {okButton: 'Export as PromV3', customButtons: [t`Export as V2 + V3`], cancelButton: 'Cancel'}); 
+        if (!exportValue) {
             return;
         }
-        const useProm = usePromValue === 1;
+        if (exportValue < 0 || exportValue > 2) {
+            toastr.error('Invalid export value');
+            return;
+        }
+
+        const useProm = exportValue === 1;
 
         // Save with chosen format before exporting
-        await createOrEditCharacter(undefined, useProm);
+        await createOrEditCharacter(undefined, exportValue);
 
         const body = { format, avatar_url: characters[this_chid].avatar, useProm: useProm };
         const response = await fetch('/api/characters/export', {
