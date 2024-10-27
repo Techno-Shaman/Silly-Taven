@@ -113,4 +113,77 @@
  * @property {string} avatar - file name of the avatar image (acts as a unique identifier)
  * @property {string} json_data - the full raw JSON data of the character
  */
+
+/** 
+ * @typedef {object} PromV3CharBookEntry
+ * @property {string} name - The name of the entry.
+ * @property {string[]} keys - An array of primary keys associated with the entry.
+ * @property {string[]} secondary_keys - An array of secondary keys associated with the entry.
+ * @property {string} content - The main content or data associated with the entry.
+ * @property {boolean} constant - Indicates if the entry's content is fixed and unchangeable.
+ * @property {boolean} selective - Indicates if the entry's inclusion is controlled by specific conditions.
+ * @property {boolean} enabled - Controls whether the entry is currently active and used.
+ * @property {number} insertion_order - Defines the order in which the entry is inserted during processing.
+ * @property {boolean} case_sensitive - Controls whether case sensitivity is applied during matching for the entry.
+ * @property {boolean} use_regex - Specifies if the entry uses regular expressions for matching.
+ * @property {number} priority - The priority level of the entry.
+ * @property {number} id - A unique identifier assigned to the entry.
+ * @property {string} comment - A human-readable description or explanation for the entry.
+ * @property {string} position - Specifies the location or context where the entry applies.
+ * @property {v2DataWorldInfoEntryExtensionInfos} extensions - An object containing additional details for extensions associated with the entry.
+ */
+
+/**
+ * @typedef {object} PromV3CharBookData
+ * @property {string} type - The type of book (e.g., "chara_book").
+ * @property {string} spec_version - The specification version (e.g., "2.0").
+ * @property {string} name - The name of the book.
+ * @property {string} description - A brief description of the book.
+ * @property {number} scan_depth - The maximum depth to search for matches when applying the book.
+ * @property {number} token_budget - The maximum number of tokens that can be consumed by the book.
+ * @property {boolean} recursive_scanning - Indicates if the book should be applied recursively.
+ * @property {v2DataWorldInfoEntryExtensionInfos} extensions - Additional details specific to the book.
+ * @property {PromV3CharBookEntry[]} entries - The entries in the book.
+
+/**
+ * @typedef {object} PromV3CharGreetings
+ * @property {string[]} solo - Greetings used for solo interactions.
+ * @property {string[]} group - Greetings used for group chats.
+ */
+
+/**
+ * @typedef {object} PromV3CharExampleMessages
+ * @property {"user" | "assistant" | "system"} role - The role of the speaker (user, assistant, or system).
+ * @property {string} content - The message content.
+ */
+
+/**
+ * @typedef {object} PromV3CharData
+ * @property {string} name - The character's name.
+ * @property {string} description - A brief description of the character.
+ * @property {string} personality - A short summary of the character's personality traits.
+ * @property {PromV3CharGreetings} greetings - Greetings used by the character.
+ * @property {PromV3CharExampleMessages[]} example_messages - Example messages that demonstrate conversation styles.
+ * @property {string} system_prompt - The system prompt used to interact with the character.
+ * @property {string} post_history_instructions - Instructions for handling the character's conversation history.
+ * @property {v2CharDataExtensionInfos} extensions - Additional details specific to the character.
+ * @property {PromV3CharBookData} character_book - Data about the character's world or story (if applicable).
+ */
+
+/**
+ * @typedef {object} PromV3Metadata
+ * @property {string} creator - The name of the person who created the character.
+ * @property {string} version - The character's data version.
+ * @property {string} source - The source material or inspiration for the character.
+ * @property {string[]} tags - A list of keywords or labels associated with the character.
+ * @property {string} creator_notes - Internal notes or comments left by the character's creator.
+
+/**
+ * @typedef {object} PromV3Data
+ * @property {string} type - The data type (e.g., chara_card).
+ * @property {string} spec_version - The specification version (e.g., 3.1).
+ * @property {PromV3CharData} data - The character data.
+ * @property {PromV3Metadata} metadata - Additional metadata associated with the character.
+ */
+
 export default 0;// now this file is a module

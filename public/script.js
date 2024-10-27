@@ -7979,6 +7979,7 @@ async function createOrEditCharacter(e) {
     } else {
         try {
             let url = '/api/characters/edit';
+            let specUrl = '/api/characters/get-spec';
 
             if (crop_data != undefined) {
                 url += `?crop=${encodeURIComponent(JSON.stringify(crop_data))}`;
@@ -7991,6 +7992,23 @@ async function createOrEditCharacter(e) {
                     formData.append('alternate_greetings', value);
                 }
             }
+
+            const specFormData = new FormData();
+            specFormData.append('avatar_url', formData.get('avatar_url'));
+
+            const specResult = await fetch(specUrl, {
+                method: 'POST',
+                headers: headers,
+                body: specFormData,
+                cache: 'no-cache',
+            });
+
+            if (!specResult.ok) {
+                throw new Error('Spec fetch result is not ok');
+            }
+
+            const specData = await specResult.json();
+            formData.append('spec_version', specData.spec_version);
 
             const fetchResult = await fetch(url, {
                 method: 'POST',
@@ -10503,7 +10521,16 @@ jQuery(async function () {
 
         // Save before exporting
         await createOrEditCharacter();
-        const body = { format, avatar_url: characters[this_chid].avatar };
+
+        const html = await renderTemplateAsync('exportFormat');
+        const usePromValue = await callGenericPopup(html, POPUP_TYPE.CONFIRM, null, {okButton: 'Export as PromV3', customButtons: [t`Export as V2 + V3`], cancelButton: 'Cancel'}); 
+        if (!usePromValue) {
+            toastr.error('A export format must be selected.');
+            return;
+        }
+
+        const useProm = usePromValue === 1;
+        const body = { format, avatar_url: characters[this_chid].avatar, useProm: useProm };
 
         const response = await fetch('/api/characters/export', {
             method: 'POST',

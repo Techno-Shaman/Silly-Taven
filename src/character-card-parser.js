@@ -9,34 +9,42 @@ const PNGtext = require('png-chunk-text');
  * Writes only 'chara', 'ccv3' is not supported and removed not to create a mismatch.
  * @param {Buffer} image PNG image buffer
  * @param {string} data Character data to write
+ * @param {boolean | undefined} prom Export as PromV3 ("3.1") instead of V3 (ccv3) + V2 (chara)
  * @returns {Buffer} PNG image buffer with metadata
  */
-const write = (image, data) => {
+const write = (image, data, prom) => {
     const chunks = extract(image);
     const tEXtChunks = chunks.filter(chunk => chunk.name === 'tEXt');
 
     // Remove existing tEXt chunks
     for (const tEXtChunk of tEXtChunks) {
         const data = PNGtext.decode(tEXtChunk.data);
-        if (data.keyword.toLowerCase() === 'chara' || data.keyword.toLowerCase() === 'ccv3') {
+        if (data.keyword.toLowerCase() === 'chara' || data.keyword.toLowerCase() === 'ccv3' || data.keyword.toLowerCase() === 'sdcpromv1') {
             chunks.splice(chunks.indexOf(tEXtChunk), 1);
         }
     }
 
-    // Add new v2 chunk before the IEND chunk
     const base64EncodedData = Buffer.from(data, 'utf8').toString('base64');
-    chunks.splice(-1, 0, PNGtext.encode('chara', base64EncodedData));
 
-    // Try adding v3 chunk before the IEND chunk
-    try {
-        //change v2 format to v3
-        const v3Data = JSON.parse(data);
-        v3Data.spec = 'chara_card_v3';
-        v3Data.spec_version = '3.0';
+    // Export as PromV3 ("3.1") than V3 (ccv3) + V2 (chara)
+    if (prom) {
+        // Add Prom chunk before the IEND chunk
+        chunks.splice(-1, 0, PNGtext.encode('sdcPromv1', base64EncodedData));
+    } else {
+        // Add new v2 chunk before the IEND chunk
+        chunks.splice(-1, 0, PNGtext.encode('chara', base64EncodedData));
 
-        const base64EncodedData = Buffer.from(JSON.stringify(v3Data), 'utf8').toString('base64');
-        chunks.splice(-1, 0, PNGtext.encode('ccv3', base64EncodedData));
-    } catch (error) { }
+        // Try adding v3 chunk before the IEND chunk
+        try {
+            //change v2 format to v3
+            const v3Data = JSON.parse(data);
+            v3Data.spec = 'chara_card_v3';
+            v3Data.spec_version = '3.0';
+
+            const base64EncodedData = Buffer.from(JSON.stringify(v3Data), 'utf8').toString('base64');
+            chunks.splice(-1, 0, PNGtext.encode('ccv3', base64EncodedData));
+        } catch (error) { }
+    }
 
     const newBuffer = Buffer.from(encode(chunks));
     return newBuffer;
@@ -44,7 +52,7 @@ const write = (image, data) => {
 
 /**
  * Reads Character metadata from a PNG image buffer.
- * Supports both V2 (chara) and V3 (ccv3). V3 (ccv3) takes precedence.
+ * Supports both V2 (chara), V3 (ccv3) and PromV3 ("3.1"). PromV3 or V3 (ccv3) takes precedence.
  * @param {Buffer} image PNG image buffer
  * @returns {string} Character data
  */
@@ -56,6 +64,12 @@ const read = (image) => {
     if (textChunks.length === 0) {
         console.error('PNG metadata does not contain any text chunks.');
         throw new Error('No PNG metadata.');
+    }
+
+    const promV3Index = textChunks.findIndex((chunk) => chunk.keyword.toLowerCase() === 'sdcpromv1');
+
+    if (promV3Index > -1) {
+        return Buffer.from(textChunks[promV3Index].text, 'base64').toString('utf8');
     }
 
     const ccv3Index = textChunks.findIndex((chunk) => chunk.keyword.toLowerCase() === 'ccv3');

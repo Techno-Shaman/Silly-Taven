@@ -49,9 +49,10 @@ async function readCharacterData(inputFile, inputFormat = 'png') {
  * @param {string} outputFile - Target image file name
  * @param {import('express').Request} request - Express request obejct
  * @param {Crop|undefined} crop - Crop parameters
+ * @param {boolean} importAsProm - Import as PromV3 format
  * @returns {Promise<boolean>} - True if the operation was successful
  */
-async function writeCharacterData(inputFile, data, outputFile, request, crop = undefined) {
+async function writeCharacterData(inputFile, data, outputFile, request, crop = undefined, importAsProm = false) {
     try {
         // Reset the cache
         for (const key of characterDataCache.keys()) {
@@ -76,7 +77,7 @@ async function writeCharacterData(inputFile, data, outputFile, request, crop = u
         const inputImage = await getInputImage();
 
         // Get the chunks
-        const outputImage = characterCardParser.write(inputImage, data);
+        const outputImage = characterCardParser.write(inputImage, data, importAsProm);
         const outputImagePath = path.join(request.user.directories.characters, `${outputFile}.png`);
 
         writeFileAtomicSync(outputImagePath, outputImage);
@@ -197,7 +198,17 @@ const processCharacter = async (item, directories) => {
         const imgData = await readCharacterData(imgFile);
         if (imgData === undefined) throw new Error('Failed to read character file');
 
-        let jsonObject = getCharaCardV2(JSON.parse(imgData), directories, false);
+        const processedData = JSON.parse(imgData);
+
+        var jsonObject
+        const specVersion = await getCharacterSpec(imgData);
+
+        if (specVersion === '3.1') {
+            jsonObject = readFromPromV3(processedData);
+        } else {
+            jsonObject = getCharaCardV2(processedData, directories, false);
+        }
+
         jsonObject.avatar = item;
         const character = jsonObject;
         character['json_data'] = imgData;
@@ -228,6 +239,31 @@ const processCharacter = async (item, directories) => {
         };
     }
 };
+
+const getCharacterSpec = async (char) => {
+    if (!char) return undefined;
+
+    const charParsed = JSON.parse(char)
+    const validator = new TavernCardValidator(charParsed);
+    const specVersion = validator.validate();  
+    
+    if (!specVersion) {
+        return undefined
+    }
+
+    switch (specVersion) {
+        case 1:
+            return '1';
+        case 2:
+            return '2';
+        case 3:
+            return '3';
+        case 3.1:
+            return '3.1';
+        default:
+            return undefined;
+    }
+}
 
 /**
  * Convert a character object to Spec V2 format.
@@ -281,11 +317,245 @@ function convertToV2(char, directories) {
     return result;
 }
 
-
 function unsetFavFlag(char) {
     _.set(char, 'fav', false);
     _.set(char, 'data.extensions.fav', false);
 }
+
+/** 
+ * Read character data from PromV3 format and applies the data
+ * into something ST can understand.
+ * @param {object} char PromV3 character data
+ * @returns {object} Character object in legacy V1, V2 or Risu V3 format
+ */
+function readFromPromV3(char) {
+    console.log(`Reading PromV3`);
+    if (_.isUndefined(char.data)) {
+        console.warn(`Char ${char['name']} is missing PromV3 data`);
+        return char;
+    }
+
+    // set flag for prom use in extensions (if missing or not set)
+    char['data']['extensions']['useProm'] = true;
+
+    // data field mappings
+    const fieldMappings = {
+        name: 'name',
+        description: 'description',
+        personality: 'personality',
+        greetings: 'greetings',
+        example_messages: 'example_messages',
+        system_prompt: 'system_prompt',
+        post_history_instructions: 'post_history_instructions',
+        talkativeness: 'extensions.talkativeness',
+        fav: 'extensions.fav',
+    }
+
+    _.forEach(fieldMappings, (v3Path, charField) => {
+        const promV3Value = _.get(char.data, v3Path);
+        if (_.isUndefined(promV3Value)) {
+            let defaultValue = undefined;
+
+            // Backfill default values for missing ST extension fields
+            if (v3Path === 'extensions.talkativeness') {
+                defaultValue = 0.5;
+            }
+
+            if (v3Path === 'extensions.fav') {
+                defaultValue = false;
+            }
+
+            if (!_.isUndefined(defaultValue)) {
+                char[charField] = defaultValue;
+            } else {
+                console.debug(`Char ${char['name']} has missing PromV3 data for unknown field: ${charField}`);
+                return;
+            }
+        }
+
+        // Since ST doesn't support the multi-greetings yet, set first
+        // in list as the first message and rest as alternate greetings
+        // (if greetings is an array and has any elements)
+        if (v3Path === 'greetings') {
+            if (_.isArray(promV3Value.solo) && promV3Value.solo.length > 0) {
+                char['first_mes'] = promV3Value.solo[0];
+                char['data']['alternate_greetings'] = promV3Value.solo.slice(1);
+            }
+            // combine group greetings with alternate greetings
+            if (_.isArray(promV3Value.group) && promV3Value.group.length > 0) {
+                char['data']['alternate_greetings'] = char['data']['alternate_greetings'].concat(promV3Value.group);
+            }
+            return;
+        }
+
+        // Since ST doesn't support the multi-example messages yet
+        // Combine all example messages into a single string
+        // (if example_messages is an array and has any elements)
+        if (v3Path === 'example_messages') {
+            if (_.isArray(promV3Value) && promV3Value.length > 0) {
+                // check if all elements are valid
+                if (promV3Value.every(x => x.role && x.content)) {
+                    char['mes_example'] = promV3Value.map(x => `${x.content}`).join('\n');
+                    return;
+                } else {
+                    console.log(`Char ${char['name']} has example messages that does not adhere to PromV3 specs.`);
+                }
+            }
+            return;
+        }
+
+        char[charField] = promV3Value;
+    });
+
+    // metadata field mappings
+    const metadataFieldMappings = {
+        creator: 'creator',
+        version: 'version',
+        tags: 'tags',
+        creator_notes: 'creator_notes',
+    }
+
+    const stMetadataMappings = {
+        creator: 'creator',
+        creator_notes: 'creator_notes',
+        tags: 'tags',
+        version: 'character_version',
+    }
+
+    _.forEach(metadataFieldMappings, (v3Path, charField) => {
+        const promV3Value = _.get(char.metadata, v3Path);
+        if (_.isUndefined(promV3Value)) {
+            let defaultValue = '';
+
+            char[charField] = defaultValue;
+            console.debug(`Char ${char['name']} has missing PromV3 metadata for unknown field: ${charField}`);
+            return;
+        }
+        if (charField === 'tags') {
+            char[charField] = promV3Value;
+        } else {
+            char['data'][`${stMetadataMappings[charField]}`] = promV3Value;
+        }
+    });
+
+    char['chat'] = char['chat'] ?? humanizedISO8601DateTime();
+
+    return char;
+}
+
+function getCharaPromV3(char, specVersion, directories, hoistDate = true) {
+    if (specVersion !== '3.1') {
+        // convert V1, V2, or Risu V3 to PromV3
+        char = convertToPromV3(char, directories);
+
+        if (hoistDate && !char.chat) {
+            char.chat = humanizedISO8601DateTime();
+        }
+    }
+    return readFromPromV3(char);
+}
+
+function convertToPromV3(char, directories) {
+    // Simulate incoming data from frontend form
+
+    // 1. Combine first message and alternate greetings into greetings object
+    // Assume all greetings are solo greetings
+    const greetings = { solo: [], group: [] };
+    if (char.first_mes) greetings.solo.push(char.first_mes);
+
+    if (char.alternate_greetings) {
+        if (Array.isArray(char.alternate_greetings)) greetings.solo.push(...char.alternate_greetings);
+        if (typeof char.alternate_greetings === 'string') greetings.solo.push(char.alternate_greetings);
+        console.warn(`Char ${char.name} has alternate greetings but of a unknown type. Skipping.`);
+    }
+
+    // 2. Convert example messages to an array of 'CharacterExampleMessage' objects
+    const exampleMessages = [{ role: 'assistant', content: char.mes_example }];
+
+    // 3. Convert metadata to 'CharacterInfo' object
+    const metadata = {
+        creator: char.data.creator,
+        version: char.data.character_version,
+        source: '',
+        creator_notes: char.data.creator_notes,
+        tags: char.data.tags,
+    }
+
+    const result = charaFormatToPromV3({
+        json_data: JSON.stringify(char),
+        ch_name: char.name,
+        description: char.description,
+        personality: char.personality,
+        greetings,
+        exampleMessages,
+        system_prompt: char.data.system_prompt,
+        post_history_instructions: char.data.post_history_instructions,
+        talkativeness: char.data.extensions.talkativeness,
+        fav: char.data.extensions.fav,
+        world: char.data.extensions.world,
+        depth_prompt_prompt: char.data.extensions.depth_prompt.prompt,
+        depth_prompt_depth: char.data.extensions.depth_prompt.depth,
+        depth_prompt_role: char.data.extensions.depth_prompt.role,
+        metadata,
+    }, directories);
+
+    result.chat = char.chat ?? humanizedISO8601DateTime();
+
+    return result;
+}
+
+function convertPromV3ToChara(char, directories) {
+    // Simulate incoming data from frontend form
+
+    // 1. Set first solo greeting as first message (if any)
+    let first_mes = '';
+    let alternate_greetings = [];
+
+    if (char.data.greetings.solo.length > 0) {
+        first_mes = char.data.greetings.solo[0];
+        // Set the rest of the solo greetings as alternate greetings
+        if (char.data.greetings.solo.length > 1) {
+            alternate_greetings = char.data.greetings.solo.slice(1);
+        }
+        
+        // Combine group greetings with alternate greetings
+        if (char.data.greetings.group.length > 0) {
+            alternate_greetings = alternate_greetings.concat(char.data.greetings.group);
+        }
+    }
+
+    // 2. Convert example messages to a string (if any)
+    let mes_example = '';
+    if (char.data.example_messages.length > 0) {
+        mes_example = char.data.example_messages.map(x => x.content).join('\n');
+    }
+
+    // 3. Add missing metadata fields from PromV3 to V2
+    char.data.character_version = char.metadata.version;
+
+    const result = charaFormatData({
+        json_data: JSON.stringify(char),
+        ch_name: char.data.name,
+        description: char.data.description,
+        personality: char.data.personality,
+        scenario: char.data.scenario,
+        first_mes: first_mes,
+        mes_example: mes_example,
+        creator_notes: char.metadata.creator_notes,
+        talkativeness: char.data.extensions.talkativeness,
+        fav: char.data.extensions.fav,
+        creator: char.metadata.creator,
+        tags: char.metadata.tags,
+        depth_prompt_prompt: char.data.extensions.depth_prompt_prompt,
+        depth_prompt_depth: char.data.extensions.depth_prompt_depth,
+        depth_prompt_role: char.data.extensions.depth_prompt_role,
+    }, directories);
+
+    result.chat = char.chat ?? humanizedISO8601DateTime();
+
+    return result;
+}
+
 
 function readFromV2(char) {
     if (_.isUndefined(char.data)) {
@@ -340,14 +610,161 @@ function readFromV2(char) {
 }
 
 /**
+ * Format character data to PromV3 format.
+ * @param {object} data Character data
+ * @param {import('../users').UserDirectoryList} directories User directories
+ */
+function charaFormatToPromV3(data, directories) {
+    // This is supposed to save all the foreign keys that ST doesn't care about
+    const char = tryParse(data.json_data) || {};
+    const newChar = {};
+
+    // Checks if data.greetings is an object with solo and group keys
+    const getGreetings = data => {
+        if(!data.greetings && !char.first_mes) return { solo: [], group: [] };
+        if (data.greetings) {
+            if (typeof data.greetings === 'object') return data.greetings;
+            console.warn(`Char ${data.ch_name} has greetings that does not adhere to PromV3 specs.`);
+            return { solo: [], group: [] };
+        } else {
+            console.log(`Char ${data.ch_name} has greetings in the old format. Migrating to PromV3 format.`);
+
+            // Migrate first message to solo greetings
+            const greetings = char.first_mes ? [char.first_mes] : [];
+
+            // Migrate alternate greetings to group greetings (if any)
+            // Assume alternate greetings are solo greetings
+            if (char.alternate_greetings !== undefined) {
+                if (Array.isArray(char.alternate_greetings)) greetings.push(...char.alternate_greetings);
+                if (typeof char.alternate_greetings === 'string') greetings.push(...[char.alternate_greetings]);
+                console.warn(`Char ${data.ch_name} has alternate greetings but of a unknown type. Skipping.`);
+            }
+            return { solo: greetings, group: [] };
+        }
+    };
+
+    // Checks if data.example_messages is an array of 'CharacterExampleMessage' objects
+    const getExampleMessages = data => {
+        if (!data.example_messages && !char.mes_example) return [];
+        if (data.example_messages) {
+            if (Array.isArray(data) && data.every(x => x.role && x.content)) return data;
+            console.warn(`Char ${data.ch_name} has example messages that does not adhere to PromV3 specs.`);
+            return [];
+        } else {
+            console.log(`Char ${data.ch_name} has example messages in the old format. Migrating to PromV3 format.`);
+            if (typeof char.mes_example === 'string') {
+                return char.mes_example.split('\n').map(x => ({ role: 'assistant', content: x }));
+            }
+            console.warn(`Char ${data.ch_name} has example messages but of a unknown type. Skipping.`);
+            return [];
+        }
+    };
+
+    // Checks if data.metadata is an 'CharacterInfo' object
+    const getMetadata = data => {
+        const metadata = {
+            creator: '',
+            version: '',
+            source: '',
+            creator_notes: '',
+            tags: [],
+        }
+
+        if (!data.metadata && !char.data.creator && !char.data.character_version && !char.data.creator_notes) return metadata;
+        if (data.metadata) {
+            // check for required fields
+            if (data.metadata.creator && data.metadata.version && data.metadata.creator_notes) {
+                metadata.creator = data.metadata.creator;
+                metadata.version = data.metadata.version;
+                metadata.source = data.metadata.source ?? '';
+                metadata.creator_notes = data.metadata.creator_notes;
+
+                if (Array.isArray(data.metadata.tags)) metadata.tags = data.metadata.tags;
+                return metadata;
+            }
+            console.warn(`Char ${data.ch_name} has metadata that does not adhere to PromV3 specs.`);
+        } else {
+            console.log(`Char ${data.ch_name} has metadata in the old format. Migrating to PromV3 format.`);
+            metadata.creator = char.data.creator ?? '';
+            metadata.version = char.data.character_version ?? '';
+            metadata.source = "";
+            metadata.creator_notes = char.data.creator_notes ?? '';
+            
+            if (Array.isArray(char.tags)) metadata.tags = char.tags;
+        }
+        return metadata;
+    }
+
+    const greetings = getGreetings(data);
+    const exampleMessages = getExampleMessages(data);
+    const metadata = getMetadata(data);
+
+    // Required PromV3 fields
+    _.set(newChar, 'type', 'chara_card');
+    _.set(newChar, 'spec_version', '3.1');
+
+    // Data fields
+    _.set(newChar, 'data.name', data.ch_name);
+    _.set(newChar, 'data.description', data.description || '');
+    _.set(newChar, 'data.personality', data.personality || '');
+    _.set(newChar, 'data.greetings', greetings);
+    _.set(newChar, 'data.example_messages', exampleMessages);
+    _.set(newChar, 'data.system_prompt', data.system_prompt || '');
+    _.set(newChar, 'data.post_history_instructions', data.post_history_instructions || '');
+
+    // ST extension fields to V2 Extensions object
+    _.set(newChar, 'data.extensions.talkativeness', data.talkativeness);
+    _.set(newChar, 'data.extensions.fav', data.fav == 'true');
+    _.set(newChar, 'data.extensions.world', data.world || '');
+
+    /// Spec extension: depth prompt
+    const depth_default = 4;
+    const role_default = 'system';
+    const depth_value = !isNaN(Number(data.depth_prompt_depth)) ? Number(data.depth_prompt_depth) : depth_default;
+    const role_value = data.depth_prompt_role ?? role_default;
+    _.set(newChar, 'data.extensions.depth_prompt.prompt', data.depth_prompt_prompt ?? '');
+    _.set(newChar, 'data.extensions.depth_prompt.depth', depth_value);
+    _.set(newChar, 'data.extensions.depth_prompt.role', role_value);
+
+    if (data.world) {
+        try {
+            const file = readWorldInfoFile(directories, data.world, false);
+
+            // File was imported - save it to the character book
+            if (file && file.originalData) {
+                _.set(newChar, 'data.character_book', file.originalData);
+            }
+
+            // File was not imported - convert the world info to the character book
+            if (file && file.entries) {
+                _.set(newChar, 'data.character_book', convertWorldInfoToPromCharaBook(data.world, file.entries));
+            }
+
+        } catch {
+            console.debug(`Failed to read world info file: ${data.world}. Character book will not be available.`);
+        }
+    }
+
+    _.set(newChar, 'metadata', metadata);
+
+    return newChar;
+}
+
+/**
  * Format character data to Spec V2 format.
  * @param {object} data Character data
  * @param {import('../users').UserDirectoryList} directories User directories
- * @returns
  */
 function charaFormatData(data, directories) {
     // This is supposed to save all the foreign keys that ST doesn't care about
     const char = tryParse(data.json_data) || {};
+
+    // Remove PromV3 fields
+    delete char.data.greetings;
+    delete char.data.example_messages;
+    delete char.metadata
+    delete char.type;
+    delete char.spec_version;
 
     // Checks if data.alternate_greetings is an array, a string, or neither, and acts accordingly. (expected to be an array of strings)
     const getAlternateGreetings = data => {
@@ -442,6 +859,63 @@ function charaFormatData(data, directories) {
 
     return char;
 }
+
+/**
+ * @param {string} name Name of World Info file
+ * @param {object} entries Entries object
+ */
+function convertWorldInfoToPromCharaBook(name, entries) {
+    /** @type {{ entries: object[]; name: string }} */
+    const result = { entries: [], name };
+
+    for (const index in entries) {
+        const entry = entries[index];
+
+        const originalEntry = {
+            id: entry.uid,
+            keys: entry.key,
+            secondary_keys: entry.keysecondary,
+            content: entry.content,
+            constant: entry.constant,
+            selective: entry.selective,
+            enabled: !entry.disable,
+            insertion_order: entry.order,
+            position: entry.position == 0 ? 'before_char' : 'after_char',
+            use_regex: true, // ST keys are always regex
+            case_sensitive: entry.caseSensitive ?? null,
+            comment: entry.comment,
+            extensions: {
+                position: entry.position,
+                exclude_recursion: entry.excludeRecursion,
+                display_index: entry.displayIndex,
+                probability: entry.probability ?? null,
+                useProbability: entry.useProbability ?? false,
+                depth: entry.depth ?? 4,
+                selectiveLogic: entry.selectiveLogic ?? 0,
+                group: entry.group ?? '',
+                group_override: entry.groupOverride ?? false,
+                group_weight: entry.groupWeight ?? null,
+                prevent_recursion: entry.preventRecursion ?? false,
+                delay_until_recursion: entry.delayUntilRecursion ?? false,
+                scan_depth: entry.scanDepth ?? null,
+                match_whole_words: entry.matchWholeWords ?? null,
+                use_group_scoring: entry.useGroupScoring ?? false,
+                case_sensitive: entry.caseSensitive ?? null,
+                automation_id: entry.automationId ?? '',
+                role: entry.role ?? 0,
+                vectorized: entry.vectorized ?? false,
+                sticky: entry.sticky ?? null,
+                cooldown: entry.cooldown ?? null,
+                delay: entry.delay ?? null,
+            },
+        };
+
+        result.entries.push(originalEntry);
+    }
+
+    return result;
+}
+
 
 /**
  * @param {string} name Name of World Info file
@@ -590,7 +1064,15 @@ async function importFromJson(uploadPath, { request }, preservedFileName) {
 
     let jsonData = JSON.parse(data);
 
-    if (jsonData.spec !== undefined) {
+    if (jsonData.type === 'chara_card') {
+        console.log('Importing from PromV3 json');
+        jsonData = readFromPromV3(jsonData);
+        jsonData['create_date'] = humanizedISO8601DateTime();
+        const pngName = preservedFileName || getPngName(jsonData.data?.name || jsonData.name, request.user.directories);
+        const char = JSON.stringify(jsonData);
+        const result = await writeCharacterData(defaultAvatarPath, char, pngName, request, undefined, true);
+        return result ? pngName : '';
+    } else if (jsonData.spec !== undefined) {
         console.log(`Importing from ${jsonData.spec} json`);
         importRisuSprites(request.user.directories, jsonData);
         unsetFavFlag(jsonData);
@@ -673,7 +1155,15 @@ async function importFromPng(uploadPath, { request }, preservedFileName) {
     jsonData.name = sanitize(jsonData.data?.name || jsonData.name);
     const pngName = preservedFileName || getPngName(jsonData.name, request.user.directories);
 
-    if (jsonData.spec !== undefined) {
+    if (jsonData.type === 'chara_card') {
+        console.log('Found a PromV3 character file.');
+        jsonData = readFromPromV3(jsonData);
+        jsonData['create_date'] = humanizedISO8601DateTime();
+        const char = JSON.stringify(jsonData);
+        const result = await writeCharacterData(uploadPath, char, pngName, request, undefined, true);
+        fs.unlinkSync(uploadPath);
+        return result ? pngName : '';
+    } else if (jsonData.spec !== undefined) {
         console.log(`Found a ${jsonData.spec} character file.`);
         importRisuSprites(request.user.directories, jsonData);
         unsetFavFlag(jsonData);
@@ -716,6 +1206,22 @@ async function importFromPng(uploadPath, { request }, preservedFileName) {
 }
 
 const router = express.Router();
+
+// Returns the character spec version
+router.post('/get-spec', jsonParser, async function (request, response) {
+    if (!request.body || !request.body.avatar_url) {
+        return response.sendStatus(400);
+    }
+
+    const avatarPath = path.join(request.user.directories.characters, request.body.avatar_url);
+    const avatarData = await readCharacterData(avatarPath);
+    const specVersion = await getCharacterSpec(avatarData);
+
+    if (specVersion === undefined) {
+        return response.sendStatus(500);
+    }
+    return response.send({ spec_version: specVersion });
+})
 
 router.post('/create', urlencodedParser, async function (request, response) {
     try {
@@ -772,8 +1278,11 @@ router.post('/rename', jsonParser, async function (request, response) {
         _.set(oldData, 'name', newName);
         const newData = JSON.stringify(oldData);
 
+        const specVersion = await getCharacterSpec(rawOldData);
+        const useProm = specVersion === '3.1';
+
         // Write data to new location
-        await writeCharacterData(oldAvatarPath, newData, newInternalName, request);
+        await writeCharacterData(oldAvatarPath, newData, newInternalName, request, undefined, useProm);
 
         // Rename chats folder
         if (fs.existsSync(oldChatsPath) && !fs.existsSync(newChatsPath)) {
@@ -815,12 +1324,12 @@ router.post('/edit', urlencodedParser, async function (request, response) {
     try {
         if (!request.file) {
             const avatarPath = path.join(request.user.directories.characters, request.body.avatar_url);
-            await writeCharacterData(avatarPath, char, targetFile, request);
+            await writeCharacterData(avatarPath, char, targetFile, request, undefined, useProm);
         } else {
             const crop = tryParse(request.query.crop);
             const newAvatarPath = path.join(request.file.destination, request.file.filename);
             invalidateThumbnail(request.user.directories, 'avatar', request.body.avatar_url);
-            await writeCharacterData(newAvatarPath, char, targetFile, request, crop);
+            await writeCharacterData(newAvatarPath, char, targetFile, request, crop, useProm);
             fs.unlinkSync(newAvatarPath);
         }
 
@@ -860,6 +1369,8 @@ router.post('/edit-attribute', jsonParser, async function (request, response) {
         if (typeof charJSON !== 'string') throw new Error('Failed to read character file');
 
         const char = JSON.parse(charJSON);
+        const specVersion = await getCharacterSpec(charJSON);
+        const useProm = specVersion === '3.1';
         //check if the field exists
         if (char[request.body.field] === undefined && char.data[request.body.field] === undefined) {
             console.error('Error: invalid field.');
@@ -870,7 +1381,7 @@ router.post('/edit-attribute', jsonParser, async function (request, response) {
         char.data[request.body.field] = request.body.value;
         let newCharJSON = JSON.stringify(char);
         const targetFile = (request.body.avatar_url).replace('.png', '');
-        await writeCharacterData(avatarPath, newCharJSON, targetFile, request);
+        await writeCharacterData(avatarPath, newCharJSON, targetFile, request, undefined, useProm);
         return response.sendStatus(200);
     } catch (err) {
         console.error('An error occured, character edit invalidated.', err);
@@ -908,7 +1419,7 @@ router.post('/merge-attributes', jsonParser, async function (request, response) 
 
         //Accept either V1 or V2.
         if (validator.validate()) {
-            await writeCharacterData(avatarPath, JSON.stringify(character), targetImg, request);
+            await writeCharacterData(avatarPath, JSON.stringify(character), targetImg, request, undefined, validator.validatePromV3());
             response.sendStatus(200);
         } else {
             console.log(validator.lastValidationError);
@@ -1213,15 +1724,29 @@ router.post('/export', jsonParser, async function (request, response) {
                 return response.send(fileContent);
             }
             case 'json': {
-                try {
+                
                     let json = await readCharacterData(filename);
                     if (json === undefined) return response.sendStatus(400);
-                    let jsonObject = getCharaCardV2(JSON.parse(json), request.user.directories);
+
+                    let jsonObject = null
+                    const specVersion = await getCharacterSpec(json);
+
+                    if (specVersion === undefined) {
+                        return response.sendStatus(500);
+                    }
+
+                    if (request.body.useProm) {
+                        jsonObject = getCharaPromV3(JSON.parse(json), specVersion, request.user.directories);
+                    } else {
+                        if (specVersion === '3.1') {
+                            jsonObject = convertPromV3ToChara(JSON.parse(json), request.user.directories);
+                        } else {
+                            jsonObject = getCharaCardV2(JSON.parse(json), request.user.directories);
+                        }
+                    }
                     return response.type('json').send(JSON.stringify(jsonObject, null, 4));
-                }
-                catch {
-                    return response.sendStatus(400);
-                }
+            
+               
             }
         }
 
