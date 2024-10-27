@@ -329,14 +329,10 @@ function unsetFavFlag(char) {
  * @returns {object} Character object in legacy V1, V2 or Risu V3 format
  */
 function readFromPromV3(char) {
-    console.log(`Reading PromV3`);
     if (_.isUndefined(char.data)) {
         console.warn(`Char ${char['name']} is missing PromV3 data`);
         return char;
     }
-
-    // set flag for prom use in extensions (if missing or not set)
-    char['data']['extensions']['useProm'] = true;
 
     // data field mappings
     const fieldMappings = {
@@ -470,15 +466,18 @@ function convertToPromV3(char, directories) {
     }
 
     // 2. Convert example messages to an array of 'CharacterExampleMessage' objects
-    const exampleMessages = [{ role: 'assistant', content: char.mes_example }];
+    let exampleMessages = [];
+    if (char.mes_example) {
+        exampleMessages.push({ role: 'assistant', content: char.mes_example });
+    }
 
     // 3. Convert metadata to 'CharacterInfo' object
     const metadata = {
-        creator: char.data.creator,
-        version: char.data.character_version,
+        creator: char.data.creator || '',
+        version: char.data.character_version || '',
         source: '',
-        creator_notes: char.data.creator_notes,
-        tags: char.data.tags,
+        creator_notes: char.data.creator_notes || '',
+        tags: char.data.tags ?? char.tags ?? [],
     }
 
     const result = charaFormatToPromV3({
@@ -1315,7 +1314,15 @@ router.post('/edit', urlencodedParser, async function (request, response) {
         return;
     }
 
-    let char = charaFormatData(request.body, request.user.directories);
+    const useProm = request.body.exportType === 1
+
+    var char 
+    if (useProm) {
+        char = getCharaPromV3(request.body, request.user.directories);
+    } else {
+        char = charaFormatData(request.body, request.user.directories);
+    }
+
     char.chat = request.body.chat;
     char.create_date = request.body.create_date;
     char = JSON.stringify(char);
@@ -1724,7 +1731,7 @@ router.post('/export', jsonParser, async function (request, response) {
                 return response.send(fileContent);
             }
             case 'json': {
-                
+                try {
                     let json = await readCharacterData(filename);
                     if (json === undefined) return response.sendStatus(400);
 
@@ -1745,8 +1752,10 @@ router.post('/export', jsonParser, async function (request, response) {
                         }
                     }
                     return response.type('json').send(JSON.stringify(jsonObject, null, 4));
-            
-               
+                } catch (err) {
+                    console.error(err);
+                    return response.sendStatus(500);
+                }
             }
         }
 
