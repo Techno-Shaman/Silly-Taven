@@ -396,11 +396,23 @@ export function convertGooglePrompt(messages, model, useSysPrompt = false, charN
 
         // similar story as claude
         if (message.name) {
-            if (Array.isArray(message.content)) {
-                message.content[0].text = `${message.name}: ${message.content[0].text}`;
-            } else {
-                message.content = `${message.name}: ${message.content}`;
+            if (userName && message.name === 'example_user') {
+                message.name = userName;
             }
+            if (charName && message.name === 'example_assistant') {
+                message.name = charName;
+            }
+
+            if (Array.isArray(message.content)) {
+                if (!message.content[0].text.startsWith(`${message.name}: `)) {
+                    message.content[0].text = `${message.name}: ${message.content[0].text}`;
+                }
+            } else {
+                if (!message.content.startsWith(`${message.name}: `)) {
+                    message.content = `${message.name}: ${message.content}`;
+                }
+            }
+
             delete message.name;
         }
 
