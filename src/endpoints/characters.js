@@ -865,14 +865,20 @@ function charaFormatData(data, directories) {
  * @param {object} entries Entries object
  */
 function convertWorldInfoToPromCharaBook(name, entries) {
-    /** @type {{ entries: object[]; name: string }} */
-    const result = { entries: [], name };
+    /** @type {{ entries: object[]; name: string, type: 'chara_book', spec_version: '2.0' }} */
+    const result = { 
+        type: 'chara_book', 
+        spec_version: '2.0',
+        name,
+        entries: [],
+    };
 
     for (const index in entries) {
         const entry = entries[index];
 
         const originalEntry = {
             id: entry.uid,
+            name: '',
             keys: entry.key,
             secondary_keys: entry.keysecondary,
             content: entry.content,
@@ -1320,8 +1326,6 @@ router.post('/edit', urlencodedParser, async function (request, response) {
         // use card spec version to save data
         useProm = specVersion === '3.1';
     }
-
-    console.log(`Prom Status: ${useProm}`);
 
     if (useProm) {
         char = convertToPromV3(request.body, request.user.directories);
