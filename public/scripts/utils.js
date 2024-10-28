@@ -14,6 +14,7 @@ import { Popup, POPUP_RESULT, POPUP_TYPE } from './popup.js';
 import { SlashCommandClosure } from './slash-commands/SlashCommandClosure.js';
 import { getTagsList } from './tags.js';
 import { groups, selected_group } from './group-chats.js';
+import { getCurrentLocale } from './i18n.js';
 
 /**
  * Pagination status string template.
@@ -838,7 +839,7 @@ export function timestampToMoment(timestamp) {
     }
 
     const iso8601 = parseTimestamp(timestamp);
-    const objMoment = iso8601 ? moment(iso8601) : moment.invalid();
+    const objMoment = iso8601 ? moment(iso8601).locale(getCurrentLocale()) : moment.invalid();
 
     dateCache.set(timestamp, objMoment);
     return objMoment;

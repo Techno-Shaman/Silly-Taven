@@ -3143,7 +3143,8 @@ class StreamingProcessor {
 
         //console.log("Generated text size:", text.length, text)
 
-        if (power_user.auto_swipe) {
+        const isAborted = this.abortController.signal.aborted;
+        if (power_user.auto_swipe && !isAborted) {
             function containsBlacklistedWords(str, blacklist, threshold) {
                 const regex = new RegExp(`\\b(${blacklist.join('|')})\\b`, 'gi');
                 const matches = str.match(regex) || [];
@@ -4590,7 +4591,8 @@ export async function Generate(type, { automatic_trigger, force_name2, quiet_pro
             playMessageSound();
         }
 
-        if (power_user.auto_swipe) {
+        const isAborted = abortController && abortController.signal.aborted;
+        if (power_user.auto_swipe && !isAborted) {
             console.debug('checking for autoswipeblacklist on non-streaming message');
             function containsBlacklistedWords(getMessage, blacklist, threshold) {
                 console.debug('checking blacklisted words');
@@ -4772,6 +4774,11 @@ export function shouldAutoContinue(messageChunk, isImpersonate) {
 
     if (is_send_press) {
         console.debug('Auto-continue is disabled because a message is currently being sent.');
+        return false;
+    }
+
+    if (abortController && abortController.signal.aborted) {
+        console.debug('Auto-continue is not triggered because the generation was stopped.');
         return false;
     }
 

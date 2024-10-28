@@ -1307,11 +1307,23 @@ export function getTextGenGenerationData(finalPrompt, maxTokens, isImpersonate, 
             : [];
         const tokenBans = toIntArray(banned_tokens);
         logitBiasArray.push(...tokenBans.map(x => [Number(x), false]));
+        const sequenceBreakers = (() => {
+            try {
+                return JSON.parse(params.dry_sequence_breakers);
+            } catch {
+                if (typeof params.dry_sequence_breakers === 'string') {
+                    return params.dry_sequence_breakers.split(',');
+                }
+
+                return undefined;
+            }
+        })();
         const llamaCppParams = {
             'logit_bias': logitBiasArray,
             // Conflicts with ooba's grammar_string
             'grammar': settings.grammar_string,
             'cache_prompt': true,
+            'dry_sequence_breakers': sequenceBreakers,
         };
         params = Object.assign(params, llamaCppParams);
     }

@@ -1,4 +1,3 @@
-import { moment } from '../lib.js';
 import { registerDebugFunction } from './power-user.js';
 import { updateSecretDisplay } from './secrets.js';
 
@@ -9,6 +8,8 @@ var langs;
 // Don't change to let/const! It will break module loading.
 // eslint-disable-next-line prefer-const
 var localeData;
+
+export const getCurrentLocale = () => localeFile;
 
 /**
  * An observer that will check if any new i18n elements are added to the document
@@ -216,7 +217,6 @@ function addLanguagesToDropdown() {
 }
 
 export async function initLocales() {
-    moment.locale(localeFile);
     langs = await fetch('/locales/lang.json').then(response => response.json());
     localeData = await getLocaleData(localeFile);
     applyLocale();
