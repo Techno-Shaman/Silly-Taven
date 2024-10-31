@@ -109,7 +109,29 @@ function runRegexScript(regexScript, rawString, { characterOverride } = {}) {
         return newString;
     }
 
-    const findRegex = regexFromString(regexScript.substituteRegex ? substituteParams(regexScript.findRegex) : regexScript.findRegex);
+    const findRegex = regexFromString(
+        regexScript.substituteRegex ?
+            substituteParams(regexScript.findRegex, undefined, undefined, undefined, undefined, true, {}, function (x) {
+                return x.replaceAll(/[\n\r\t\v\f\0\.\^\$\*\+\?\{\}\[\]\\\/\|\(\)]/gs, function(s) {
+                    switch (s) {
+                        case '\n':
+                            return '\\n';
+                        case '\r':
+                            return '\\r';
+                        case '\t':
+                            return '\\t';
+                        case '\v':
+                            return '\\v';
+                        case '\f':
+                            return '\\f';
+                        case '\0':
+                            return '\\0';
+                        default:
+                            return '\\' + s;
+                    }
+                });
+            }) : regexScript.findRegex,
+    );
 
     // The user skill issued. Return with nothing.
     if (!findRegex) {

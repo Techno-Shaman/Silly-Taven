@@ -317,7 +317,7 @@ function getTimeSinceLastMessage() {
     return 'just now';
 }
 
-function randomReplace(input, emptyListPlaceholder = '') {
+function randomReplace(input, emptyListPlaceholder = '', varEscape = (x => x)) {
     const randomPattern = /{{random\s?::?([^}]+)}}/gi;
 
     input = input.replace(randomPattern, (match, listString) => {
@@ -332,12 +332,12 @@ function randomReplace(input, emptyListPlaceholder = '') {
         }
         const rng = seedrandom('added entropy.', { entropy: true });
         const randomIndex = Math.floor(rng() * list.length);
-        return list[randomIndex];
+        return varEscape(list[randomIndex]);
     });
     return input;
 }
 
-function pickReplace(input, rawContent, emptyListPlaceholder = '') {
+function pickReplace(input, rawContent, emptyListPlaceholder = '', varEscape = (x => x)) {
     const pickPattern = /{{pick\s?::?([^}]+)}}/gi;
 
     // We need to have a consistent chat hash, otherwise we'll lose rolls on chat file rename or branch switches
@@ -363,11 +363,11 @@ function pickReplace(input, rawContent, emptyListPlaceholder = '') {
         // @ts-ignore - have to use numbers for legacy picks
         const rng = seedrandom(finalSeed);
         const randomIndex = Math.floor(rng() * list.length);
-        return list[randomIndex];
+        return varEscape(list[randomIndex]);
     });
 }
 
-function diceRollReplace(input, invalidRollPlaceholder = '') {
+function diceRollReplace(input, invalidRollPlaceholder = '', varEscape = (x => x)) {
     const rollPattern = /{{roll[ : ]([^}]+)}}/gi;
 
     return input.replace(rollPattern, (match, matchValue) => {
@@ -385,7 +385,7 @@ function diceRollReplace(input, invalidRollPlaceholder = '') {
         }
 
         const result = droll.roll(formula);
-        return new String(result.total);
+        return varEscape(String(result.total));
     });
 }
 
@@ -393,9 +393,10 @@ function diceRollReplace(input, invalidRollPlaceholder = '') {
  * Returns the difference between two times. Works with any time format acceptable by moment().
  * Can work with {{date}} {{time}} macros
  * @param {string} input - The string to replace time difference macros in.
+ * @param {function} [varEscape] - Optional function for escaping the macro contents.
  * @returns {string} The string with replaced time difference macros.
  */
-function timeDiffReplace(input) {
+function timeDiffReplace(input, varEscape = (x => x)) {
     const timeDiffPattern = /{{timeDiff::(.*?)::(.*?)}}/gi;
 
     const output = input.replace(timeDiffPattern, (_match, matchPart1, matchPart2) => {
@@ -403,7 +404,7 @@ function timeDiffReplace(input) {
         const time2 = moment(matchPart2);
 
         const timeDifference = moment.duration(time1.diff(time2));
-        return timeDifference.humanize(true);
+        return varEscape(timeDifference.humanize(true));
     });
 
     return output;
@@ -414,9 +415,10 @@ function timeDiffReplace(input) {
  * @param {string} content - The string to substitute parameters in.
  * @param {EnvObject} env - Map of macro names to the values they'll be substituted with. If the param
  * values are functions, those functions will be called and their return values are used.
+ * @param {function} [varEscape] - Optional function that escapes macros before they're injected
  * @returns {string} The string with substituted parameters.
  */
-export function evaluateMacros(content, env) {
+export function evaluateMacros(content, env, varEscape = (x => x)) {
     if (!content) {
         return '';
     }
@@ -424,24 +426,24 @@ export function evaluateMacros(content, env) {
     const rawContent = content;
 
     // Legacy non-macro substitutions
-    content = content.replace(/<USER>/gi, typeof env.user === 'function' ? env.user() : env.user);
-    content = content.replace(/<BOT>/gi, typeof env.char === 'function' ? env.char() : env.char);
-    content = content.replace(/<CHAR>/gi, typeof env.char === 'function' ? env.char() : env.char);
-    content = content.replace(/<CHARIFNOTGROUP>/gi, typeof env.group === 'function' ? env.group() : env.group);
-    content = content.replace(/<GROUP>/gi, typeof env.group === 'function' ? env.group() : env.group);
+    content = content.replace(/<USER>/gi, varEscape(typeof env.user === 'function' ? env.user() : env.user));
+    content = content.replace(/<BOT>/gi, varEscape(typeof env.char === 'function' ? env.char() : env.char));
+    content = content.replace(/<CHAR>/gi, varEscape(typeof env.char === 'function' ? env.char() : env.char));
+    content = content.replace(/<CHARIFNOTGROUP>/gi, varEscape(typeof env.group === 'function' ? env.group() : env.group));
+    content = content.replace(/<GROUP>/gi, varEscape(typeof env.group === 'function' ? env.group() : env.group));
 
     // Short circuit if there are no macros
     if (!content.includes('{{')) {
         return content;
     }
 
-    content = diceRollReplace(content);
-    content = replaceInstructMacros(content, env);
-    content = replaceVariableMacros(content);
-    content = content.replace(/{{newline}}/gi, '\n');
+    content = diceRollReplace(content, varEscape);
+    content = replaceInstructMacros(content, env, varEscape);
+    content = replaceVariableMacros(content, varEscape);
+    content = content.replace(/{{newline}}/gi, varEscape('\n'));
     content = content.replace(/(?:\r?\n)*{{trim}}(?:\r?\n)*/gi, '');
     content = content.replace(/{{noop}}/gi, '');
-    content = content.replace(/{{input}}/gi, () => String($('#send_textarea').val()));
+    content = content.replace(/{{input}}/gi, () => varEscape(String($('#send_textarea').val())));
 
     // Add all registered macros to the env object
     const nonce = uuidv4();
@@ -454,41 +456,39 @@ export function evaluateMacros(content, env) {
         content = content.replace(new RegExp(`{{${escapeRegex(varName)}}}`, 'gi'), () => {
             const param = env[varName];
             const value = MacrosParser.sanitizeMacroValue(typeof param === 'function' ? param(nonce) : param);
-            return value;
+            return varEscape(value);
         });
     }
 
-    content = content.replace(/{{maxPrompt}}/gi, () => String(getMaxContextSize()));
-    content = content.replace(/{{lastMessage}}/gi, () => getLastMessage());
-    content = content.replace(/{{lastMessageId}}/gi, () => String(getLastMessageId() ?? ''));
-    content = content.replace(/{{lastUserMessage}}/gi, () => getLastUserMessage());
-    content = content.replace(/{{lastCharMessage}}/gi, () => getLastCharMessage());
-    content = content.replace(/{{firstIncludedMessageId}}/gi, () => String(getFirstIncludedMessageId() ?? ''));
-    content = content.replace(/{{lastSwipeId}}/gi, () => String(getLastSwipeId() ?? ''));
-    content = content.replace(/{{currentSwipeId}}/gi, () => String(getCurrentSwipeId() ?? ''));
-    content = content.replace(/{{reverse:(.+?)}}/gi, (_, str) => Array.from(str).reverse().join(''));
+    content = content.replace(/{{maxPrompt}}/gi, () => varEscape(String(getMaxContextSize())));
+    content = content.replace(/{{lastMessage}}/gi, () => varEscape(getLastMessage()));
+    content = content.replace(/{{lastMessageId}}/gi, () => varEscape(String(getLastMessageId() ?? '')));
+    content = content.replace(/{{lastUserMessage}}/gi, () => varEscape(getLastUserMessage()));
+    content = content.replace(/{{lastCharMessage}}/gi, () => varEscape(getLastCharMessage()));
+    content = content.replace(/{{firstIncludedMessageId}}/gi, () => varEscape(String(getFirstIncludedMessageId() ?? '')));
+    content = content.replace(/{{lastSwipeId}}/gi, () => varEscape(String(getLastSwipeId() ?? '')));
+    content = content.replace(/{{currentSwipeId}}/gi, () => varEscape(String(getCurrentSwipeId() ?? '')));
+    content = content.replace(/{{reverse:(.+?)}}/gi, (_, str) => varEscape(Array.from(str).reverse().join('')));
 
     content = content.replace(/\{\{\/\/([\s\S]*?)\}\}/gm, '');
 
-    content = content.replace(/{{time}}/gi, () => moment().format('LT'));
-    content = content.replace(/{{date}}/gi, () => moment().format('LL'));
-    content = content.replace(/{{weekday}}/gi, () => moment().format('dddd'));
-    content = content.replace(/{{isotime}}/gi, () => moment().format('HH:mm'));
-    content = content.replace(/{{isodate}}/gi, () => moment().format('YYYY-MM-DD'));
+    content = content.replace(/{{time}}/gi, () => varEscape(moment().format('LT')));
+    content = content.replace(/{{date}}/gi, () => varEscape(moment().format('LL')));
+    content = content.replace(/{{weekday}}/gi, () => varEscape(moment().format('dddd')));
+    content = content.replace(/{{isotime}}/gi, () => varEscape(moment().format('HH:mm')));
+    content = content.replace(/{{isodate}}/gi, () => varEscape(moment().format('YYYY-MM-DD')));
 
     content = content.replace(/{{datetimeformat +([^}]*)}}/gi, (_, format) => {
-        const formattedTime = moment().format(format);
-        return formattedTime;
+        return varEscape(moment().format(format));
     });
     content = content.replace(/{{idle_duration}}/gi, () => getTimeSinceLastMessage());
     content = content.replace(/{{time_UTC([-+]\d+)}}/gi, (_, offset) => {
         const utcOffset = parseInt(offset, 10);
-        const utcTime = moment().utc().utcOffset(utcOffset).format('LT');
-        return utcTime;
+        return varEscape(moment().utc().utcOffset(utcOffset).format('LT'));
     });
-    content = timeDiffReplace(content);
+    content = timeDiffReplace(content, varEscape);
     content = bannedWordsReplace(content);
-    content = randomReplace(content);
-    content = pickReplace(content, rawContent);
+    content = randomReplace(content, varEscape);
+    content = pickReplace(content, rawContent, varEscape);
     return content;
 }

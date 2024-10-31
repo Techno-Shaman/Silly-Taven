@@ -568,9 +568,10 @@ function selectMatchingContextTemplate(name) {
  * @param {string} input Input string.
  * @param {Object<string, *>} env - Map of macro names to the values they'll be substituted with. If the param
  * values are functions, those functions will be called and their return values are used.
+ * @param {function} [varEscape] - Optional function that escapes the macro contents before they're replaced
  * @returns {string} String with macros replaced.
  */
-export function replaceInstructMacros(input, env) {
+export function replaceInstructMacros(input, env, varEscape = (x => x)) {
     if (!input) {
         return '';
     }
@@ -600,16 +601,16 @@ export function replaceInstructMacros(input, env) {
 
     for (const [placeholder, value] of Object.entries(instructMacros)) {
         const regex = new RegExp(`{{(${placeholder})}}`, 'gi');
-        input = input.replace(regex, power_user.instruct.enabled ? value : '');
+        input = input.replace(regex, power_user.instruct.enabled ? varEscape(value) : '');
     }
 
     for (const [placeholder, value] of Object.entries(syspromptMacros)) {
         const regex = new RegExp(`{{(${placeholder})}}`, 'gi');
-        input = input.replace(regex, power_user.sysprompt.enabled ? value : '');
+        input = input.replace(regex, power_user.sysprompt.enabled ? varEscape(value) : '');
     }
 
-    input = input.replace(/{{exampleSeparator}}/gi, power_user.context.example_separator);
-    input = input.replace(/{{chatStart}}/gi, power_user.context.chat_start);
+    input = input.replace(/{{exampleSeparator}}/gi, varEscape(power_user.context.example_separator));
+    input = input.replace(/{{chatStart}}/gi, varEscape(power_user.context.chat_start));
 
     return input;
 }

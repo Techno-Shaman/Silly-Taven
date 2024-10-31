@@ -2522,10 +2522,11 @@ export function scrollChatToBottom() {
  * Substitutes {{macro}} parameters in a string.
  * @param {string} content - The string to substitute parameters in.
  * @param {Record<string,any>} additionalMacro - Additional environment variables for substitution.
+ * @param {function} [varEscape] - Optional function for escaping macros before thry're replaced
  * @returns {string} The string with substituted parameters.
  */
-export function substituteParamsExtended(content, additionalMacro = {}) {
-    return substituteParams(content, undefined, undefined, undefined, undefined, true, additionalMacro);
+export function substituteParamsExtended(content, additionalMacro = {}, varEscape = (x => x)) {
+    return substituteParams(content, undefined, undefined, undefined, undefined, true, additionalMacro, varEscape);
 }
 
 /**
@@ -2537,9 +2538,10 @@ export function substituteParamsExtended(content, additionalMacro = {}) {
  * @param {string} [_group] - The group members list for {{group}} substitution.
  * @param {boolean} [_replaceCharacterCard] - Whether to replace character card macros.
  * @param {Record<string,any>} [additionalMacro] - Additional environment variables for substitution.
+ * @param {function} [varEscape] - Optional function for escaping macros before thry're replaced.
  * @returns {string} The string with substituted parameters.
  */
-export function substituteParams(content, _name1, _name2, _original, _group, _replaceCharacterCard = true, additionalMacro = {}) {
+export function substituteParams(content, _name1, _name2, _original, _group, _replaceCharacterCard = true, additionalMacro = {}, varEscape = (x => x)) {
     if (!content) {
         return '';
     }
@@ -2597,7 +2599,7 @@ export function substituteParams(content, _name1, _name2, _original, _group, _re
         Object.assign(environment, additionalMacro);
     }
 
-    return evaluateMacros(content, environment);
+    return evaluateMacros(content, environment, varEscape);
 }
 
 
