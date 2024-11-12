@@ -437,6 +437,7 @@ export const event_types = {
     MESSAGE_SWIPED: 'message_swiped',
     MESSAGE_SENT: 'message_sent',
     MESSAGE_RECEIVED: 'message_received',
+    MESSAGE_EDIT_BEGIN: 'message_edit_begin',
     MESSAGE_EDITED: 'message_edited',
     MESSAGE_DELETED: 'message_deleted',
     MESSAGE_UPDATED: 'message_updated',
@@ -10445,7 +10446,9 @@ jQuery(async function () {
             var edit_mes_id = $(this).closest('.mes').attr('mesid');
             this_edit_mes_id = edit_mes_id;
 
-            var text = chat[edit_mes_id]['mes'];
+            await eventSource.emit(event_types.MESSAGE_EDIT_BEGIN, this_edit_mes_id);
+
+            var text = chat[edit_mes_id]['mes']; // chat[edit_mes_id]['mes'].extra.display_text
             if (chat[edit_mes_id]['is_user']) {
                 this_edit_mes_chname = name1;
             } else if (chat[edit_mes_id]['force_avatar']) {
