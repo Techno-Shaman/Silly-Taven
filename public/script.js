@@ -10448,7 +10448,7 @@ jQuery(async function () {
 
             await eventSource.emit(event_types.MESSAGE_EDIT_BEGIN, this_edit_mes_id);
 
-            var text = chat[edit_mes_id]['mes']; // chat[edit_mes_id]['mes'].extra.display_text
+            var text = chat[edit_mes_id]['mes'];
             if (chat[edit_mes_id]['is_user']) {
                 this_edit_mes_chname = name1;
             } else if (chat[edit_mes_id]['force_avatar']) {
