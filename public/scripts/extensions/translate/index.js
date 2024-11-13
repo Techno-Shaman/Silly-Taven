@@ -32,6 +32,7 @@ const defaultSettings = {
     internal_language: 'en',
     provider: 'google',
     auto_mode: autoModeOptions.NONE,
+    is_edit_translated: false,
 };
 
 const languageCodes = {
@@ -163,6 +164,8 @@ function loadSettings() {
     $(`#translation_provider option[value="${extension_settings.translate.provider}"]`).attr('selected', true);
     $(`#translation_target_language option[value="${extension_settings.translate.target_language}"]`).attr('selected', true);
     $(`#translation_auto_mode option[value="${extension_settings.translate.auto_mode}"]`).attr('selected', true);
+    $('#translation_is_edit_translated').prop('checked', extension_settings.translate.is_edit_translated);
+
     showKeysButton();
 }
 
@@ -171,7 +174,7 @@ async function translateImpersonate(text) {
     $('#send_textarea').val(translatedText);
 }
 
-async function translateIncomingMessage(messageId) {
+async function translateIncomingMessage(messageId, isReverse=false) {
     const context = getContext();
     const message = context.chat[messageId];
 
@@ -185,8 +188,13 @@ async function translateIncomingMessage(messageId) {
     }
 
     const textToTranslate = substituteParams(message.mes, context.name1, message.name);
-    const translation = await translate(textToTranslate, extension_settings.translate.target_language);
-    message.extra.display_text = translation;
+    if (!isReverse) {
+        message.extra.display_text = await translate(textToTranslate);
+    }
+    else {
+        message.extra.display_text = message.mes;
+        message.mes = await translate(textToTranslate, extension_settings.translate.internal_language);
+    }
 
     updateMessageBlock(messageId, message);
 }
@@ -396,7 +404,7 @@ async function chunkedTranslate(text, lang, translateFn, chunkSize = 5000) {
  * @param {string} lang Target language code
  * @returns {Promise<string>} Translated text
  */
-async function translate(text, lang) {
+async function translate(text, lang=null) {
     try {
         if (text == '') {
             return '';
@@ -546,6 +554,22 @@ async function onTranslationsClearClick() {
     await reloadCurrentChat();
 }
 
+async function translateMessageEditBegin(messageId) {
+    const context = getContext();
+    const chat = context.chat;
+    const message = chat[messageId];
+
+    if (message.is_system || extension_settings.translate.auto_mode == autoModeOptions.NONE) {
+        return;
+    }
+
+    if (extension_settings.translate.is_edit_translated && message.extra.display_text) {
+        const t = message.extra.display_text;
+        message.extra.display_text = message.mes;
+        message.mes = t;
+    }
+}
+
 async function translateMessageEdit(messageId) {
     const context = getContext();
     const chat = context.chat;
@@ -555,7 +579,10 @@ async function translateMessageEdit(messageId) {
         return;
     }
 
-    if ((message.is_user && shouldTranslate(outgoingTypes)) || (!message.is_user && shouldTranslate(incomingTypes))) {
+    if (extension_settings.translate.is_edit_translated && message.extra.display_text) {
+        await translateIncomingMessage(messageId, true);
+    }
+    else if ((message.is_user && shouldTranslate(outgoingTypes)) || (!message.is_user && shouldTranslate(incomingTypes))) {
         await translateIncomingMessage(messageId);
     }
 }
@@ -582,6 +609,7 @@ const handleIncomingMessage = createEventHandler(translateIncomingMessage, () =>
 const handleOutgoingMessage = createEventHandler(translateOutgoingMessage, () => shouldTranslate(outgoingTypes));
 const handleImpersonateReady = createEventHandler(translateImpersonate, () => shouldTranslate(incomingTypes));
 const handleMessageEdit = createEventHandler(translateMessageEdit, () => true);
+const handleMessageEditBegin = createEventHandler(translateMessageEditBegin, () => true);
 
 window['translate'] = translate;
 
@@ -601,6 +629,10 @@ jQuery(async () => {
 
     $('#translation_auto_mode').on('change', (event) => {
         extension_settings.translate.auto_mode = event.target.value;
+        saveSettingsDebounced();
+    });
+    $('#translation_is_edit_translated').on('change', (event) => {
+        extension_settings.translate.is_edit_translated = event.target.checked;
         saveSettingsDebounced();
     });
     $('#translation_provider').on('change', (event) => {
@@ -679,6 +711,7 @@ jQuery(async () => {
     eventSource.on(event_types.MESSAGE_SWIPED, handleIncomingMessage);
     eventSource.on(event_types.IMPERSONATE_READY, handleImpersonateReady);
     eventSource.on(event_types.MESSAGE_UPDATED, handleMessageEdit);
+    eventSource.on(event_types.MESSAGE_EDIT_BEGIN, handleMessageEditBegin);
 
     document.body.classList.add('translate');
 
