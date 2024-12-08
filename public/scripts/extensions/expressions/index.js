@@ -697,6 +697,11 @@ async function moduleWorker() {
         return;
     }
 
+    // If using LLM api then check if streamingProcessor is finished to avoid sending multiple requests to the API
+    if (extension_settings.expressions.api === EXPRESSION_API.llm && context.streamingProcessor && !context.streamingProcessor.isFinished) { 
+	    return;
+    }
+
     // API is busy
     if (inApiCall) {
         console.debug('Classification API is busy');
@@ -994,6 +999,11 @@ function sampleClassifyText(text) {
 
     // Replace macros, remove asterisks and quotes
     let result = substituteParams(text).replace(/[*"]/g, '');
+
+    // If using LLM api there is no need to check length of characters
+    if (extension_settings.expressions.api === EXPRESSION_API.llm) {
+        return result.trim();
+    }
 
     const SAMPLE_THRESHOLD = 500;
     const HALF_SAMPLE_THRESHOLD = SAMPLE_THRESHOLD / 2;
