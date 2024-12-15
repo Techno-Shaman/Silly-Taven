@@ -4579,8 +4579,9 @@ export async function Generate(type, { automatic_trigger, force_name2, quiet_pro
                 const shouldDeleteMessage = type !== 'swipe' && ['', '...'].includes(lastMessage?.mes) && ['', '...'].includes(streamingProcessor?.result);
                 hasToolCalls && shouldDeleteMessage && await deleteLastMessage();
                 const invocationResult = await ToolManager.invokeFunctionTools(streamingProcessor.toolCalls);
+                const shouldStopGeneration = (!invocationResult.invocations.length && shouldDeleteMessage) || invocationResult.stealthCalls.length;
                 if (hasToolCalls) {
-                    if (!invocationResult.invocations.length && shouldDeleteMessage) {
+                    if (shouldStopGeneration) {
                         if (Array.isArray(invocationResult.errors) && invocationResult.errors.length) {
                             ToolManager.showToolCallError(invocationResult.errors);
                         }
@@ -4683,8 +4684,9 @@ export async function Generate(type, { automatic_trigger, force_name2, quiet_pro
             const shouldDeleteMessage = type !== 'swipe' && ['', '...'].includes(getMessage);
             hasToolCalls && shouldDeleteMessage && await deleteLastMessage();
             const invocationResult = await ToolManager.invokeFunctionTools(data);
+            const shouldStopGeneration = (!invocationResult.invocations.length && shouldDeleteMessage) || invocationResult.stealthCalls.length;
             if (hasToolCalls) {
-                if (!invocationResult.invocations.length && shouldDeleteMessage) {
+                if (shouldStopGeneration) {
                     if (Array.isArray(invocationResult.errors) && invocationResult.errors.length) {
                         ToolManager.showToolCallError(invocationResult.errors);
                     }
