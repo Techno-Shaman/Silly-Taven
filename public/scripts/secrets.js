@@ -38,6 +38,7 @@ export const SECRET_KEYS = {
     NANOGPT: 'api_key_nanogpt',
     TAVILY: 'api_key_tavily',
     BFL: 'api_key_bfl',
+    GENERIC: 'api_key_generic',
 };
 
 const INPUT_MAP = {
@@ -71,6 +72,7 @@ const INPUT_MAP = {
     [SECRET_KEYS.HUGGINGFACE]: '#api_key_huggingface',
     [SECRET_KEYS.BLOCKENTROPY]: '#api_key_blockentropy',
     [SECRET_KEYS.NANOGPT]: '#api_key_nanogpt',
+    [SECRET_KEYS.GENERIC]: '#api_key_generic',
 };
 
 async function clearSecret() {

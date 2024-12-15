@@ -158,7 +158,8 @@ async function tryReadImage(imgPath, crop) {
         return image;
     }
     // If it's an unsupported type of image (APNG) - just read the file as buffer
-    catch {
+    catch (error) {
+        console.log(`Failed to read image: ${imgPath}`, error);
         return fs.readFileSync(imgPath);
     }
 }

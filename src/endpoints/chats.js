@@ -9,7 +9,18 @@ import { sync as writeFileAtomicSync } from 'write-file-atomic';
 import _ from 'lodash';
 
 import { jsonParser, urlencodedParser } from '../express-common.js';
-import { getConfigValue, humanizedISO8601DateTime, tryParse, generateTimestamp, removeOldBackups } from '../util.js';
+import {
+    getConfigValue,
+    humanizedISO8601DateTime,
+    tryParse,
+    generateTimestamp,
+    removeOldBackups,
+    formatBytes,
+} from '../util.js';
+
+const isBackupDisabled = getConfigValue('disableChatBackup', false);
+const maxTotalChatBackups = Number(getConfigValue('maxTotalChatBackups', -1));
+const throttleInterval = getConfigValue('chatBackupThrottleInterval', 10_000);
 
 /**
  * Saves a chat to the backups directory.
@@ -19,7 +30,6 @@ import { getConfigValue, humanizedISO8601DateTime, tryParse, generateTimestamp, 
  */
 function backupChat(directory, name, chat) {
     try {
-        const isBackupDisabled = getConfigValue('disableChatBackup', false);
 
         if (isBackupDisabled) {
             return;
@@ -32,11 +42,20 @@ function backupChat(directory, name, chat) {
         writeFileAtomicSync(backupFile, chat, 'utf-8');
 
         removeOldBackups(directory, `chat_${name}_`);
+
+        if (isNaN(maxTotalChatBackups) || maxTotalChatBackups < 0) {
+            return;
+        }
+
+        removeOldBackups(directory, 'chat_', maxTotalChatBackups);
     } catch (err) {
         console.log(`Could not backup chat for ${name}`, err);
     }
 }
 
+/**
+ * @type {Map<string, import('lodash').DebouncedFunc<function(string, string, string): void>>}
+ */
 const backupFunctions = new Map();
 
 /**
@@ -45,24 +64,10 @@ const backupFunctions = new Map();
  * @returns {function(string, string, string): void} Backup function
  */
 function getBackupFunction(handle) {
-    const throttleInterval = getConfigValue('chatBackupThrottleInterval', 10_000);
     if (!backupFunctions.has(handle)) {
         backupFunctions.set(handle, _.throttle(backupChat, throttleInterval, { leading: true, trailing: true }));
     }
-    return backupFunctions.get(handle);
-}
-
-/**
- * Formats a byte size into a human-readable string with units
- * @param {number} bytes - The size in bytes to format
- * @returns {string} The formatted string (e.g., "1.5 MB")
- */
-function formatBytes(bytes) {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return backupFunctions.get(handle) || (() => {});
 }
 
 /**
@@ -203,19 +208,19 @@ function importKoboldLiteChat(_userName, _characterName, data) {
 
     /** @type {function(string): object} */
     function processKoboldMessage(msg) {
-        const isUser = msg.includes(inputToken) || msg.includes(outputToken);
+        const isUser = msg.includes(inputToken);
         return {
             name: isUser ? header.user_name : header.character_name,
             is_user: isUser,
-            mes: msg.replace(inputToken, '').replace(outputToken, '').trim(),
+            mes: msg.replaceAll(inputToken, '').replaceAll(outputToken, '').trim(),
             send_date: Date.now(),
         };
     }
 
     // Create the header
     const header = {
-        user_name: data.savedsettings.chatname,
-        character_name: data.savedsettings.chatopponent,
+        user_name: String(data.savedsettings.chatname),
+        character_name: String(data.savedsettings.chatopponent).split('||$||')[0],
     };
     // Format messages
     const formattedMessages = data.actions.map(processKoboldMessage);
@@ -702,7 +707,7 @@ router.post('/search', jsonParser, function (request, response) {
         }
 
         // Sort by last message date descending
-        results.sort((a, b) => new Date(b.last_mes) - new Date(a.last_mes));
+        results.sort((a, b) => new Date(b.last_mes).getTime() - new Date(a.last_mes).getTime());
         return response.send(results);
 
     } catch (error) {

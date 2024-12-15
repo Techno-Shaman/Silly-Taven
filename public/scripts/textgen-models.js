@@ -160,6 +160,24 @@ export async function loadInfermaticAIModels(data) {
     }
 }
 
+export function loadGenericModels(data) {
+    if (!Array.isArray(data)) {
+        console.error('Invalid Generic models data', data);
+        return;
+    }
+
+    data.sort((a, b) => a.id.localeCompare(b.id));
+    const dataList = $('#generic_model_fill');
+    dataList.empty();
+
+    for (const model of data) {
+        const option = document.createElement('option');
+        option.value = model.id;
+        option.text = model.id;
+        dataList.append(option);
+    }
+}
+
 export async function loadDreamGenModels(data) {
     if (!Array.isArray(data)) {
         console.error('Invalid DreamGen models data', data);

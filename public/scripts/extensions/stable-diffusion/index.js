@@ -60,7 +60,6 @@ import { ToolManager } from '../../tool-calling.js';
 export { MODULE_NAME };
 
 const MODULE_NAME = 'sd';
-const UPDATE_INTERVAL = 1000;
 // This is a 1x1 transparent PNG
 const PNG_PIXEL = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 const CUSTOM_STOP_EVENT = 'sd_stop_generation';
@@ -3687,8 +3686,6 @@ async function addSDGenButtons() {
     const button = $('#sd_gen');
     const dropdown = $('#sd_dropdown');
     dropdown.hide();
-    button.hide();
-    messageButton.hide();
 
     let popper = Popper.createPopper(button.get(0), dropdown.get(0), {
         placement: 'top',
@@ -3770,18 +3767,6 @@ function isValidState() {
     }
 }
 
-async function moduleWorker() {
-    if (isValidState()) {
-        $('#sd_gen').show();
-        $('.sd_message_gen').show();
-    }
-    else {
-        $('#sd_gen').hide();
-        $('.sd_message_gen').hide();
-    }
-}
-
-setInterval(moduleWorker, UPDATE_INTERVAL);
 let buttonAbortController = null;
 
 async function sdMessageButton(e) {

@@ -54,6 +54,7 @@ module.exports = {
             },
             // These scripts are loaded in HTML; tell ESLint not to complain about them being undefined
             globals: {
+                globalThis: 'readonly',
                 ePub: 'readonly',
                 pdfjsLib: 'readonly',
                 toastr: 'readonly',

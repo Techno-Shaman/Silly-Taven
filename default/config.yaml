@@ -98,6 +98,8 @@ skipContentCheck: false
 disableChatBackup: false
 # Number of backups to keep for each chat and settings file
 numberOfBackups: 50
+# Maximum number of chat backups to keep per user (starting from the most recent). Set to -1 to keep all backups.
+maxTotalChatBackups: -1
 # Interval in milliseconds to throttle chat backups per user
 chatBackupThrottleInterval: 10000
 # Allowed hosts for card downloads

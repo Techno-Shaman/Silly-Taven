@@ -1,7 +1,7 @@
 import { Fuse } from '../lib.js';
 
 import { saveSettings, callPopup, substituteParams, getRequestHeaders, chat_metadata, this_chid, characters, saveCharacterDebounced, menu_type, eventSource, event_types, getExtensionPromptByName, saveMetadata, getCurrentChatId, extension_prompt_roles } from '../script.js';
-import { download, debounce, initScrollHeight, resetScrollHeight, parseJsonFile, extractDataFromPng, getFileBuffer, getCharaFilename, getSortableDelay, escapeRegex, PAGINATION_TEMPLATE, navigation_option, waitUntilCondition, isTrueBoolean, setValueByPath, flashHighlight, select2ModifyOptions, getSelect2OptionId, dynamicSelect2DataViaAjax, highlightRegex, select2ChoiceClickSubscribe, isFalseBoolean, getSanitizedFilename, checkOverwriteExistingData, getStringHash, parseStringArray, cancelDebounce } from './utils.js';
+import { download, debounce, initScrollHeight, resetScrollHeight, parseJsonFile, extractDataFromPng, getFileBuffer, getCharaFilename, getSortableDelay, escapeRegex, PAGINATION_TEMPLATE, navigation_option, waitUntilCondition, isTrueBoolean, setValueByPath, flashHighlight, select2ModifyOptions, getSelect2OptionId, dynamicSelect2DataViaAjax, highlightRegex, select2ChoiceClickSubscribe, isFalseBoolean, getSanitizedFilename, checkOverwriteExistingData, getStringHash, parseStringArray, cancelDebounce, findChar, onlyUnique } from './utils.js';
 import { extension_settings, getContext } from './extensions.js';
 import { NOTE_MODULE_NAME, metadata_keys, shouldWIAddPrompt } from './authors-note.js';
 import { isMobile } from './RossAscends-mods.js';
@@ -930,7 +930,50 @@ function registerWorldInfoSlashCommands() {
         return entries;
     }
 
-    async function getChatBookCallback() {
+    /**
+     * Gets the name of the persona-bound lorebook.
+     * @returns {string} The name of the persona-bound lorebook
+     */
+    function getPersonaBookCallback() {
+        return power_user.persona_description_lorebook || '';
+    }
+
+    /**
+     * Gets the name of the character-bound lorebook.
+     * @param {import('./slash-commands/SlashCommand.js').NamedArguments} args Named arguments
+     * @param {import('./slash-commands/SlashCommand.js').UnnamedArguments} name Character name
+     * @returns {string} The name of the character-bound lorebook, a JSON string of the character's lorebooks, or an empty string
+     */
+    function getCharBookCallback({ type }, name) {
+        const context = getContext();
+        if (context.groupId && !name) throw new Error('This command is not available in groups without providing a character name');
+        type = String(type ?? '').trim().toLowerCase() || 'primary';
+        name = String(name ?? '') || context.characters[context.characterId]?.avatar || null;
+        const character = findChar({ name });
+        if (!character) {
+            toastr.error('Character not found.');
+            return '';
+        }
+        const books = [];
+        if (type === 'all' || type === 'primary') {
+            books.push(character.data?.extensions?.world);
+        }
+        if (type === 'all' || type === 'additional') {
+            const fileName = getCharaFilename(context.characters.indexOf(character));
+            const extraCharLore = world_info.charLore?.find((e) => e.name === fileName);
+            if (extraCharLore && Array.isArray(extraCharLore.extraBooks)) {
+                books.push(...extraCharLore.extraBooks);
+            }
+        }
+        return type === 'primary' ? (books[0] ?? '') : JSON.stringify(books.filter(onlyUnique).filter(Boolean));
+    }
+
+    /**
+     * Gets the name of the chat-bound lorebook. Creates a new one if it doesn't exist.
+     * @param {import('./slash-commands/SlashCommand.js').NamedArguments} args Named arguments
+     * @returns {Promise<string>} The name of the chat-bound lorebook
+     */
+    async function getChatBookCallback(args) {
         const chatId = getCurrentChatId();
 
         if (!chatId) {
@@ -942,8 +985,19 @@ function registerWorldInfoSlashCommands() {
             return chat_metadata[METADATA_KEY];
         }
 
-        // Replace non-alphanumeric characters with underscores, cut to 64 characters
-        const name = `Chat Book ${getCurrentChatId()}`.replace(/[^a-z0-9]/gi, '_').replace(/_{2,}/g, '_').substring(0, 64);
+        const name = (() => {
+            // Use the provided name if it's not in use
+            if (typeof args.name === 'string') {
+                const name = String(args.name);
+                if (world_names.includes(name)) {
+                    throw new Error('This World Info file name is already in use');
+                }
+                return name;
+            }
+
+            // Replace non-alphanumeric characters with underscores, cut to 64 characters
+            return `Chat Book ${getCurrentChatId()}`.replace(/[^a-z0-9]/gi, '_').replace(/_{2,}/g, '_').substring(0, 64);
+        })();
         await createNewWorldInfo(name);
 
         chat_metadata[METADATA_KEY] = name;
@@ -1289,7 +1343,47 @@ function registerWorldInfoSlashCommands() {
         callback: getChatBookCallback,
         returns: 'lorebook name',
         helpString: 'Get a name of the chat-bound lorebook or create a new one if was unbound, and pass it down the pipe.',
+        namedArgumentList: [
+            SlashCommandNamedArgument.fromProps({
+                name: 'name',
+                description: 'lorebook name if creating a new one, will be auto-generated otherwise',
+                typeList: [ARGUMENT_TYPE.STRING],
+                isRequired: false,
+                acceptsMultiple: false,
+            }),
+        ],
         aliases: ['getchatlore', 'getchatwi'],
+    }));
+    SlashCommandParser.addCommandObject(SlashCommand.fromProps({
+        name: 'getpersonabook',
+        callback: getPersonaBookCallback,
+        returns: 'lorebook name',
+        helpString: 'Get a name of the current persona-bound lorebook and pass it down the pipe. Returns empty string if persona lorebook is not set.',
+        aliases: ['getpersonalore', 'getpersonawi'],
+    }));
+    SlashCommandParser.addCommandObject(SlashCommand.fromProps({
+        name: 'getcharbook',
+        callback: getCharBookCallback,
+        returns: 'lorebook name or a list of lorebook names',
+        namedArgumentList: [
+            SlashCommandNamedArgument.fromProps({
+                name: 'type',
+                description: 'type of the lorebook to get, returns a list for "all" and "additional"',
+                typeList: [ARGUMENT_TYPE.STRING],
+                enumList: ['primary', 'additional', 'all'],
+                defaultValue: 'primary',
+            }),
+        ],
+        unnamedArgumentList: [
+            SlashCommandArgument.fromProps({
+                description: 'Character name - or unique character identifier (avatar key). If not provided, the current character is used.',
+                typeList: [ARGUMENT_TYPE.NUMBER, ARGUMENT_TYPE.STRING],
+                isRequired: false,
+                enumProvider: commonEnumProviders.characters('character'),
+            }),
+        ],
+        helpString: 'Get a name of the character-bound lorebook and pass it down the pipe. Returns empty string if character lorebook is not set. Does not work in group chats without providing a character avatar name.',
+        aliases: ['getcharlore', 'getcharwi'],
     }));
 
     SlashCommandParser.addCommandObject(SlashCommand.fromProps({
@@ -3548,6 +3642,11 @@ async function getCharacterLore() {
             continue;
         }
 
+        if (power_user.persona_description_lorebook === worldName) {
+            console.debug(`[WI] Character ${name}'s world ${worldName} is already activated in persona lore! Skipping...`);
+            continue;
+        }
+
         const data = await loadWorldInfo(worldName);
         const newEntries = data ? Object.keys(data.entries).map((x) => data.entries[x]).map(({ uid, ...rest }) => ({ uid, world: worldName, ...rest })) : [];
         entries = entries.concat(newEntries);
@@ -3598,11 +3697,45 @@ async function getChatLore() {
     return entries;
 }
 
+async function getPersonaLore() {
+    const chatWorld = chat_metadata[METADATA_KEY];
+    const personaWorld = power_user.persona_description_lorebook;
+
+    if (!personaWorld) {
+        return [];
+    }
+
+    if (chatWorld === personaWorld) {
+        console.debug(`[WI] Persona world ${personaWorld} is already activated in chat world! Skipping...`);
+        return [];
+    }
+
+    if (selected_world_info.includes(personaWorld)) {
+        console.debug(`[WI] Persona world ${personaWorld} is already activated in global world info! Skipping...`);
+        return [];
+    }
+
+    const data = await loadWorldInfo(personaWorld);
+    const entries = data ? Object.keys(data.entries).map((x) => data.entries[x]).map(({ uid, ...rest }) => ({ uid, world: personaWorld, ...rest })) : [];
+
+    console.debug(`[WI] Persona lore has ${entries.length} entries`, [personaWorld]);
+
+    return entries;
+}
+
 export async function getSortedEntries() {
     try {
-        const globalLore = await getGlobalLore();
-        const characterLore = await getCharacterLore();
-        const chatLore = await getChatLore();
+        const [
+            globalLore,
+            characterLore,
+            chatLore,
+            personaLore,
+        ] = await Promise.all([
+            getGlobalLore(),
+            getCharacterLore(),
+            getChatLore(),
+            getPersonaLore(),
+        ]);
 
         let entries;
 
@@ -3622,8 +3755,8 @@ export async function getSortedEntries() {
                 break;
         }
 
-        // Chat lore always goes first
-        entries = [...chatLore.sort(sortFn), ...entries];
+        // Chat lore always goes first, then persona lore, then the rest
+        entries = [...chatLore.sort(sortFn), ...personaLore.sort(sortFn), ...entries];
 
         // Calculate hash and parse decorators. Split maps to preserve old hashes.
         entries = entries.map((entry) => {
@@ -3721,7 +3854,7 @@ export async function checkWorldInfo(chat, maxContext, isDryRun) {
     // Put this code here since otherwise, the chat reference is modified
     for (const key of Object.keys(context.extensionPrompts)) {
         if (context.extensionPrompts[key]?.scan) {
-            const prompt = getExtensionPromptByName(key);
+            const prompt = await getExtensionPromptByName(key);
             if (prompt) {
                 buffer.addInject(prompt);
             }
@@ -4816,9 +4949,33 @@ export async function importWorldInfo(file) {
     });
 }
 
-export function assignLorebookToChat() {
+/**
+ * Forces the world info editor to open on a specific world.
+ * @param {string} worldName The name of the world to open
+ */
+export function openWorldInfoEditor(worldName) {
+    console.log(`Opening lorebook for ${worldName}`);
+    if (!$('#WorldInfo').is(':visible')) {
+        $('#WIDrawerIcon').trigger('click');
+    }
+    const index = world_names.indexOf(worldName);
+    $('#world_editor_select').val(index).trigger('change');
+}
+
+/**
+ * Assigns a lorebook to the current chat.
+ * @param {PointerEvent} event Pointer event
+ * @returns {Promise<void>}
+ */
+export async function assignLorebookToChat(event) {
     const selectedName = chat_metadata[METADATA_KEY];
-    const template = $('#chat_world_template .chat_world').clone();
+
+    if (selectedName && event.altKey) {
+        openWorldInfoEditor(selectedName);
+        return;
+    }
+
+    const template = $(await renderTemplateAsync('chatLorebook'));
 
     const worldSelect = template.find('select');
     const chatName = template.find('.chat_name');
@@ -4846,7 +5003,7 @@ export function assignLorebookToChat() {
         saveMetadata();
     });
 
-    callPopup(template, 'text');
+    return callGenericPopup(template, POPUP_TYPE.TEXT);
 }
 
 jQuery(() => {
@@ -4997,11 +5154,7 @@ jQuery(() => {
             const worldName = characters[chid]?.data?.extensions?.world;
             const hasEmbed = checkEmbeddedWorld(chid);
             if (worldName && world_names.includes(worldName) && !event.shiftKey) {
-                if (!$('#WorldInfo').is(':visible')) {
-                    $('#WIDrawerIcon').trigger('click');
-                }
-                const index = world_names.indexOf(worldName);
-                $('#world_editor_select').val(index).trigger('change');
+                openWorldInfoEditor(worldName);
             } else if (hasEmbed && !event.shiftKey) {
                 await importEmbeddedWorldInfo();
                 saveCharacterDebounced();

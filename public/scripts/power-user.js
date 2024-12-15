@@ -261,6 +261,7 @@ let power_user = {
     persona_description_position: persona_description_positions.IN_PROMPT,
     persona_description_role: 0,
     persona_description_depth: 2,
+    persona_description_lorebook: '',
     persona_show_notifications: true,
     persona_sort_order: 'asc',
 
@@ -472,9 +473,9 @@ function switchCompactInputArea() {
     $('#compact_input_area').prop('checked', power_user.compact_input_area);
 }
 
-export function switchSwipeNumAllMessages() {
+function switchSwipeNumAllMessages() {
     $('#show_swipe_num_all_messages').prop('checked', power_user.show_swipe_num_all_messages);
-    $('.mes:not(.last_mes) .swipes-counter').css('opacity', '').toggle(power_user.show_swipe_num_all_messages);
+    $('body').toggleClass('swipeAllMessages', !!power_user.show_swipe_num_all_messages);
 }
 
 var originalSliderValues = [];
@@ -1756,7 +1757,7 @@ async function loadContextSettings() {
         } else {
             $element.val(power_user.context[control.property]);
         }
-        console.log(`Setting ${$element.prop('id')} to ${power_user.context[control.property]}`);
+        console.debug(`Setting ${$element.prop('id')} to ${power_user.context[control.property]}`);
 
         // If the setting already exists, no need to duplicate it
         // TODO: Maybe check the power_user object for the setting instead of a flag?
@@ -1767,7 +1768,7 @@ async function loadContextSettings() {
             } else {
                 power_user.context[control.property] = value;
             }
-            console.log(`Setting ${$element.prop('id')} to ${value}`);
+            console.debug(`Setting ${$element.prop('id')} to ${value}`);
             if (!CSS.supports('field-sizing', 'content') && $(this).is('textarea')) {
                 await resetScrollHeight($(this));
             }
@@ -1836,7 +1837,7 @@ async function loadContextSettings() {
  * Common function to perform fuzzy search with optional caching
  * @param {string} type - Type of search from fuzzySearchCategories
  * @param {any[]} data - Data array to search in
- * @param {Array<{name: string, weight: number, getFn?: Function}>} keys - Fuse.js keys configuration
+ * @param {Array<{name: string, weight: number, getFn?: (obj: any) => string}>} keys - Fuse.js keys configuration
  * @param {string} searchValue - The search term
  * @param {Object.<string, { resultMap: Map<string, any> }>} [fuzzySearchCaches=null] - Optional fuzzy search caches
  * @returns {import('fuse.js').FuseResult<any>[]} Results as items with their score
@@ -1850,7 +1851,6 @@ function performFuzzySearch(type, data, keys, searchValue, fuzzySearchCaches = n
         }
     }
 
-    // @ts-ignore
     const fuse = new Fuse(data, {
         keys: keys,
         includeScore: true,
@@ -1924,7 +1924,7 @@ export function fuzzySearchPersonas(data, searchValue, fuzzySearchCaches = null)
     const mappedData = data.map(x => ({
         key: x,
         name: power_user.personas[x] ?? '',
-        description: power_user.persona_descriptions[x]?.description ?? ''
+        description: power_user.persona_descriptions[x]?.description ?? '',
     }));
 
     const keys = [
@@ -2080,18 +2080,20 @@ const compareFunc = (first, second) => {
  * Sorts an array of entities based on the current sort settings
  * @param {any[]} entities An array of objects with an `item` property
  * @param {boolean} forceSearch Whether to force search sorting
+ * @param {import('./filters.js').FilterHelper} [filterHelper=null] Filter helper to use
  */
-export function sortEntitiesList(entities, forceSearch) {
+export function sortEntitiesList(entities, forceSearch, filterHelper = null) {
+    filterHelper = filterHelper ?? entitiesFilter;
     if (power_user.sort_field == undefined || entities.length === 0) {
         return;
     }
 
-    if (power_user.sort_order === 'random') {
+    const isSearch = forceSearch || $('#character_sort_order option[data-field="search"]').is(':selected');
+
+    if (!isSearch && power_user.sort_order === 'random') {
         shuffle(entities);
         return;
     }
-
-    const isSearch = forceSearch || $('#character_sort_order option[data-field="search"]').is(':selected');
 
     entities.sort((a, b) => {
         // Sort tags/folders will always be at the top
@@ -2104,8 +2106,8 @@ export function sortEntitiesList(entities, forceSearch) {
 
         // If we have search sorting, we take scores and use those
         if (isSearch) {
-            const aScore = entitiesFilter.getScore(FILTER_TYPES.SEARCH, `${a.type}.${a.id}`);
-            const bScore = entitiesFilter.getScore(FILTER_TYPES.SEARCH, `${b.type}.${b.id}`);
+            const aScore = filterHelper.getScore(FILTER_TYPES.SEARCH, `${a.type}.${a.id}`);
+            const bScore = filterHelper.getScore(FILTER_TYPES.SEARCH, `${b.type}.${b.id}`);
             return (aScore - bScore);
         }
 

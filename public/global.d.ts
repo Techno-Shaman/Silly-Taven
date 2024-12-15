@@ -1,4 +1,5 @@
 import libs from './lib';
+import getContext from './scripts/st-context';
 
 // Global namespace modules
 declare var ai;
@@ -6,7 +7,7 @@ declare var pdfjsLib;
 declare var ePub;
 
 declare var SillyTavern: {
-    getContext(): any;
+    getContext(): typeof getContext;
     llm: any;
     libs: typeof libs;
 };

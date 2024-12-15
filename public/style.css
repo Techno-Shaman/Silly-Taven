@@ -1040,8 +1040,14 @@ body .panelControlBar {
     height: var(--swipeCounterHeight);
 }
 
-.mes:not(.last_mes) .swipes-counter {
-    opacity: 0.3;
+body:not(.swipeAllMessages) .mes:not(.last_mes) .swipes-counter {
+    visibility: hidden;
+}
+
+body.swipeAllMessages .mes:not(.last_mes) .swipes-counter {
+    /* Avoid expensive DOM queries */
+    opacity: 0.3 !important;
+    display: flex !important;
 }
 
 .swipe_left {
@@ -2780,6 +2786,10 @@ select option:not(:checked) {
 
 #persona-management-block .paginationjs-nav {
     width: max-content;
+}
+
+#persona-management-block .menu_button {
+    filter: grayscale(0.5);
 }
 
 input[type=search]::-webkit-search-cancel-button {

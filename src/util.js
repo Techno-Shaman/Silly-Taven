@@ -143,6 +143,19 @@ export function getHexString(length) {
 }
 
 /**
+ * Formats a byte size into a human-readable string with units
+ * @param {number} bytes - The size in bytes to format
+ * @returns {string} The formatted string (e.g., "1.5 MB")
+ */
+export function formatBytes(bytes) {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+/**
  * Extracts a file with given extension from an ArrayBuffer containing a ZIP archive.
  * @param {ArrayBuffer} archiveBuffer Buffer containing a ZIP archive
  * @param {string} fileExtension File extension to look for
@@ -376,16 +389,24 @@ export function generateTimestamp() {
  * Remove old backups with the given prefix from a specified directory.
  * @param {string} directory The root directory to remove backups from.
  * @param {string} prefix File prefix to filter backups by.
+ * @param {number?} limit Maximum number of backups to keep. If null, the limit is determined by the `numberOfBackups` config value.
  */
-export function removeOldBackups(directory, prefix) {
-    const MAX_BACKUPS = Number(getConfigValue('numberOfBackups', 50));
+export function removeOldBackups(directory, prefix, limit = null) {
+    const MAX_BACKUPS = limit ?? Number(getConfigValue('numberOfBackups', 50));
 
     let files = fs.readdirSync(directory).filter(f => f.startsWith(prefix));
     if (files.length > MAX_BACKUPS) {
         files = files.map(f => path.join(directory, f));
         files.sort((a, b) => fs.statSync(a).mtimeMs - fs.statSync(b).mtimeMs);
 
-        fs.rmSync(files[0]);
+        while (files.length > MAX_BACKUPS) {
+            const oldest = files.shift();
+            if (!oldest) {
+                break;
+            }
+
+            fs.rmSync(oldest);
+        }
     }
 }
 

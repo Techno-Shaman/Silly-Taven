@@ -6,9 +6,6 @@ ARG APP_HOME=/home/node/app
 # Install system dependencies
 RUN apk add gcompat tini git
 
-# Ensure proper handling of kernel signals
-ENTRYPOINT [ "tini", "--" ]
-
 # Create app directory
 WORKDIR ${APP_HOME}
 
@@ -42,4 +39,5 @@ RUN \
 
 EXPOSE 8000
 
-CMD [ "./docker-entrypoint.sh" ]
+# Ensure proper handling of kernel signals
+ENTRYPOINT ["tini", "--", "./docker-entrypoint.sh"]
