@@ -1158,15 +1158,25 @@ body.swipeAllMessages .mes:not(.last_mes) .swipes-counter {
 }
 
 .avatars_inline {
+    flex-wrap: wrap;
+    overflow: hidden;
+    max-height: calc(var(--avatar-base-height) + 2 * var(--avatar-base-border-radius));
+}
+
+.hotswap.avatars_inline {
+    display: flex;
     flex-wrap: nowrap;
     overflow-x: auto;
     overflow-y: hidden;
+    padding-right: 30px;
     scroll-behavior: smooth;
-    -webkit-overflow-scrolling: touch;
+    max-height: calc(var(--avatar-base-height) + 2 * var(--avatar-base-border-radius));
     scrollbar-width: none;
     -ms-overflow-style: none;
-    padding-right: 30px;
-    max-height: calc(var(--avatar-base-height) + 2* var(--avatar-base-border-radius));
+}
+
+.hotswap.avatars_inline::-webkit-scrollbar {
+    display: none;
 }
 
 .bogus_folder_select .avatar {
