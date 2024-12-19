@@ -9209,16 +9209,22 @@ function doDrawerOpenClick() {
  * @returns {void}
  */
 function doNavbarIconClick() {
-    var icon = $(this).find('.drawer-icon');
-    var drawer = $(this).parent().find('.drawer-content');
+    const icon = $(this).find('.drawer-icon');
+    const drawer = $(this).parent().find('.drawer-content');
     if (drawer.hasClass('resizing')) { return; }
-    var drawerWasOpenAlready = $(this).parent().find('.drawer-content').hasClass('openDrawer');
-    let targetDrawerID = $(this).parent().find('.drawer-content').attr('id');
+    const drawerWasOpenAlready = $(this).parent().find('.drawer-content').hasClass('openDrawer');
+    const targetDrawerID = $(this).parent().find('.drawer-content').attr('id');
     const pinnedDrawerClicked = drawer.hasClass('pinnedOpen');
 
     if (!drawerWasOpenAlready) { //to open the drawer
-        $('.openDrawer').not('.pinnedOpen').addClass('resizing').slideToggle(200, 'swing', async function () {
-            await delay(50); $(this).closest('.drawer-content').removeClass('resizing');
+        $('.openDrawer').not('.pinnedOpen').addClass('resizing').slideToggle({
+            duration: animation_duration * 1.5,
+            easing: 'swing',
+            queue: false,
+            complete: async function () {
+                await delay(50);
+                $(this).closest('.drawer-content').removeClass('resizing');
+            },
         });
         $('.openIcon').toggleClass('closedIcon openIcon');
         $('.openDrawer').not('.pinnedOpen').toggleClass('closedDrawer openDrawer');
@@ -9228,8 +9234,9 @@ function doNavbarIconClick() {
         //console.log(targetDrawerID);
         if (targetDrawerID === 'right-nav-panel') {
             $(this).closest('.drawer').find('.drawer-content').addClass('resizing').slideToggle({
-                duration: 200,
+                duration: animation_duration * 1.5,
                 easing: 'swing',
+                queue: false,
                 start: function () {
                     jQuery(this).css('display', 'flex'); //flex needed to make charlist scroll
                 },
@@ -9241,8 +9248,14 @@ function doNavbarIconClick() {
                 },
             });
         } else {
-            $(this).closest('.drawer').find('.drawer-content').addClass('resizing').slideToggle(200, 'swing', async function () {
-                await delay(50); $(this).closest('.drawer-content').removeClass('resizing');
+            $(this).closest('.drawer').find('.drawer-content').addClass('resizing').slideToggle({
+                duration: animation_duration * 1.5,
+                easing: 'swing',
+                queue: false,
+                complete: async function () {
+                    await delay(50);
+                    $(this).closest('.drawer-content').removeClass('resizing');
+                },
             });
         }
 
@@ -9258,13 +9271,25 @@ function doNavbarIconClick() {
         icon.toggleClass('closedIcon openIcon');
 
         if (pinnedDrawerClicked) {
-            $(drawer).addClass('resizing').slideToggle(200, 'swing', async function () {
-                await delay(50); $(this).removeClass('resizing');
+            $(drawer).addClass('resizing').slideToggle({
+                duration: animation_duration * 1.5,
+                easing: 'swing',
+                queue: false,
+                complete: async function () {
+                    await delay(50);
+                    $(this).removeClass('resizing');
+                },
             });
         }
         else {
-            $('.openDrawer').not('.pinnedOpen').addClass('resizing').slideToggle(200, 'swing', async function () {
-                await delay(50); $(this).closest('.drawer-content').removeClass('resizing');
+            $('.openDrawer').not('.pinnedOpen').addClass('resizing').slideToggle({
+                duration: animation_duration * 1.5,
+                easing: 'swing',
+                queue: false,
+                complete: async function () {
+                    await delay(50);
+                    $(this).closest('.drawer-content').removeClass('resizing');
+                },
             });
         }
 
@@ -10864,7 +10889,9 @@ jQuery(async function () {
     });
 
     $(document).on('click', '.drawer-opener', doDrawerOpenClick);
-    $('.drawer-toggle').on('click', doNavbarIconClick);
+
+    // Animation will be executed on the next frame after all other click events
+    $('.drawer-toggle').on('click', function () { requestAnimationFrame(doNavbarIconClick.bind(this)); });
 
     $('html').on('touchstart mousedown', function (e) {
         var clickTarget = $(e.target);
