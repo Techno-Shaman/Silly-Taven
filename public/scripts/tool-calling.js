@@ -37,7 +37,7 @@ import { isTrueBoolean } from './utils.js';
  * @property {function} action - The action to perform when the tool is invoked.
  * @property {function} [formatMessage] - A function to format the tool call message.
  * @property {function} [shouldRegister] - A function to determine if the tool should be registered.
- * @property {boolean} [stealth] - A tool call result will not be shown in the chat.
+ * @property {boolean} [stealth] - A tool call result will not be shown in the chat. No follow-up generation will be performed.
  */
 
 /**
@@ -150,7 +150,7 @@ class ToolDefinition {
     #shouldRegister;
 
     /**
-     * A tool call result will not be shown in the chat.
+     * A tool call result will not be shown in the chat. No follow-up generation will be performed.
      * @type {boolean}
      */
     #stealth;
@@ -164,7 +164,7 @@ class ToolDefinition {
      * @param {function} action A function that will be called when the tool is executed.
      * @param {function} formatMessage A function that will be called to format the tool call toast.
      * @param {function} shouldRegister A function that will be called to determine if the tool should be registered.
-     * @param {boolean} stealth A tool call result will not be shown in the chat.
+     * @param {boolean} stealth A tool call result will not be shown in the chat. No follow-up generation will be performed.
      */
     constructor(name, displayName, description, parameters, action, formatMessage, shouldRegister, stealth) {
         this.#name = name;
@@ -906,7 +906,7 @@ export class ToolManager {
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'stealth',
-                    description: 'If true, a tool call result will not be shown in the chat.',
+                    description: 'If true, a tool call result will not be shown in the chat and no follow-up generation will be performed.',
                     typeList: [ARGUMENT_TYPE.BOOLEAN],
                     isRequired: false,
                     acceptsMultiple: false,
