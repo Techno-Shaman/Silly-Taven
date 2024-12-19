@@ -4073,6 +4073,7 @@ function registerFunctionTool() {
             return encodeURI(url);
         },
         formatMessage: () => 'Generating an image...',
+        stealth: true,
     });
 }
 
