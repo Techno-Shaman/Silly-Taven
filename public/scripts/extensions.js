@@ -417,26 +417,30 @@ async function addExtensionsButtonAndMenu() {
 
     const button = $('#extensionsMenuButton');
     const dropdown = $('#extensionsMenu');
-    //dropdown.hide();
+    let isDropdownVisible = false;
 
     let popper = Popper.createPopper(button.get(0), dropdown.get(0), {
         placement: 'top-start',
     });
 
     $(button).on('click', function () {
-        if (dropdown.is(':visible')) {
+        if (isDropdownVisible) {
             dropdown.fadeOut(animation_duration);
+            isDropdownVisible = false;
         } else {
             dropdown.fadeIn(animation_duration);
+            isDropdownVisible = true;
         }
         popper.update();
     });
 
     $('html').on('click', function (e) {
+        if (!isDropdownVisible) return;
         const clickTarget = $(e.target);
         const noCloseTargets = ['#sd_gen', '#extensionsMenuButton', '#roll_dice'];
-        if (dropdown.is(':visible') && !noCloseTargets.some(id => clickTarget.closest(id).length > 0)) {
-            $(dropdown).fadeOut(animation_duration);
+        if (!noCloseTargets.some(id => clickTarget.closest(id).length > 0)) {
+            dropdown.fadeOut(animation_duration);
+            isDropdownVisible = false;
         }
     });
 }

@@ -10086,20 +10086,21 @@ jQuery(async function () {
         await getStatusNovel();
     });
 
-    var button = $('#options_button');
-    var menu = $('#options');
+    const button = $('#options_button');
+    const menu = $('#options');
+    let isOptionsMenuVisible = false;
 
     function showMenu() {
         showBookmarksButtons();
-        // menu.stop()
         menu.fadeIn(animation_duration);
         optionsPopper.update();
+        isOptionsMenuVisible = true;
     }
 
     function hideMenu() {
-        // menu.stop();
         menu.fadeOut(animation_duration);
         optionsPopper.update();
+        isOptionsMenuVisible = false;
     }
 
     function isMouseOverButtonOrMenu() {
@@ -10107,26 +10108,15 @@ jQuery(async function () {
     }
 
     button.on('click', function () {
-        if (menu.is(':visible')) {
+        if (isOptionsMenuVisible) {
             hideMenu();
         } else {
             showMenu();
         }
     });
-    button.on('blur', function () {
-        //delay to prevent menu hiding when mouse leaves button into menu
-        setTimeout(() => {
-            if (!isMouseOverButtonOrMenu()) { hideMenu(); }
-        }, 100);
-    });
-    menu.on('blur', function () {
-        //delay to prevent menu hide when mouseleaves menu into button
-        setTimeout(() => {
-            if (!isMouseOverButtonOrMenu()) { hideMenu(); }
-        }, 100);
-    });
     $(document).on('click', function () {
-        if (!isMouseOverButtonOrMenu() && menu.is(':visible')) { hideMenu(); }
+        if (!isOptionsMenuVisible) return;
+        if (!isMouseOverButtonOrMenu()) { hideMenu(); }
     });
 
     /* $('#set_chat_scenario').on('click', setScenarioOverride); */
