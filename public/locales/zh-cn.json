@@ -1241,6 +1241,7 @@
     "Enter web URLs to scrape (one per line):": "输入要抓取的网址（每行一个）：",
     "Enter a video URL to download its transcript.": "输入视频 URL 或 ID 即可下载其文本。",
     "Image Captioning": "图像描述",
+    "Generate Caption": "生成图片说明",
     "Source": "来源",
     "Local": "本地",
     "Multimodal (OpenAI / Anthropic / llama / Google)": "多模式（OpenAI / Anthropic / llama / Google）",
@@ -1430,6 +1431,7 @@
     "sd_Raw_Last_Message": "原始最后一条消息",
     "sd_Background": "背景",
     "Image Generation": "图像生成",
+    "Stop Image Generation": "中止图像生成",
     "sd_refine_mode": "允许在将提示词发送到生成 API 之前手动编辑提示词",
     "sd_refine_mode_txt": "生成之前编辑提示词",
     "sd_interactive_mode": "发送消息时自动生成图像，例如“给我发一张猫的照片”。",
@@ -1861,5 +1863,8 @@
     "Still have questions?": "仍有疑问？",
     "Join the SillyTavern Discord": "加入SillyTavern Discord",
     "Post a GitHub issue": "发布GitHub问题",
-    "Contact the developers": "联系开发人员"
+    "Contact the developers": "联系开发人员",
+    "Stop Inspecting": "停止检查",
+    "Inspect Prompts": "检查提示词",
+    "Toggle prompt inspection": "切换提示词检查"
 }

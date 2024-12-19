@@ -159,33 +159,6 @@ export const GEMINI_SAFETY = [
     },
 ];
 
-export const BISON_SAFETY = [
-    {
-        category: 'HARM_CATEGORY_DEROGATORY',
-        threshold: 'BLOCK_NONE',
-    },
-    {
-        category: 'HARM_CATEGORY_TOXICITY',
-        threshold: 'BLOCK_NONE',
-    },
-    {
-        category: 'HARM_CATEGORY_VIOLENCE',
-        threshold: 'BLOCK_NONE',
-    },
-    {
-        category: 'HARM_CATEGORY_SEXUAL',
-        threshold: 'BLOCK_NONE',
-    },
-    {
-        category: 'HARM_CATEGORY_MEDICAL',
-        threshold: 'BLOCK_NONE',
-    },
-    {
-        category: 'HARM_CATEGORY_DANGEROUS',
-        threshold: 'BLOCK_NONE',
-    },
-];
-
 export const CHAT_COMPLETION_SOURCES = {
     OPENAI: 'openai',
     WINDOWAI: 'windowai',

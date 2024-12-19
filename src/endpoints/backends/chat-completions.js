@@ -6,7 +6,6 @@ import { jsonParser } from '../../express-common.js';
 import {
     CHAT_COMPLETION_SOURCES,
     GEMINI_SAFETY,
-    BISON_SAFETY,
     OPENROUTER_HEADERS,
 } from '../../constants.js';
 import {
@@ -262,9 +261,7 @@ async function sendMakerSuiteRequest(request, response) {
     }
 
     const model = String(request.body.model);
-    const isGemini = model.includes('gemini');
-    const isText = model.includes('text');
-    const stream = Boolean(request.body.stream) && isGemini;
+    const stream = Boolean(request.body.stream);
 
     const generationConfig = {
         stopSequences: request.body.stop,
@@ -301,39 +298,7 @@ async function sendMakerSuiteRequest(request, response) {
         return body;
     }
 
-    function getBisonBody() {
-        const prompt = isText
-            ? ({ text: convertTextCompletionPrompt(request.body.messages) })
-            : ({ messages: convertGooglePrompt(request.body.messages, model).contents });
-
-        /** @type {any} Shut the lint up */
-        const bisonBody = {
-            ...generationConfig,
-            safetySettings: BISON_SAFETY,
-            candidate_count: 1, // lewgacy spelling
-            prompt: prompt,
-        };
-
-        if (!isText) {
-            delete bisonBody.stopSequences;
-            delete bisonBody.maxOutputTokens;
-            delete bisonBody.safetySettings;
-
-            if (Array.isArray(prompt.messages)) {
-                for (const msg of prompt.messages) {
-                    msg.author = msg.role;
-                    msg.content = msg.parts[0].text;
-                    delete msg.parts;
-                    delete msg.role;
-                }
-            }
-        }
-
-        delete bisonBody.candidateCount;
-        return bisonBody;
-    }
-
-    const body = isGemini ? getGeminiBody() : getBisonBody();
+    const body = getGeminiBody();
     console.log('Google AI Studio request:', body);
 
     try {
@@ -343,10 +308,8 @@ async function sendMakerSuiteRequest(request, response) {
             controller.abort();
         });
 
-        const apiVersion = isGemini ? 'v1beta' : 'v1beta2';
-        const responseType = isGemini
-            ? (stream ? 'streamGenerateContent' : 'generateContent')
-            : (isText ? 'generateText' : 'generateMessage');
+        const apiVersion = 'v1beta';
+        const responseType = (stream ? 'streamGenerateContent' : 'generateContent');
 
         const generateResponse = await fetch(`${apiUrl.toString().replace(/\/$/, '')}/${apiVersion}/models/${model}:${responseType}?key=${apiKey}${stream ? '&alt=sse' : ''}`, {
             body: JSON.stringify(body),
@@ -897,7 +860,7 @@ router.post('/generate', jsonParser, function (request, response) {
         }
 
         let cachingAtDepth = getConfigValue('claude.cachingAtDepth', -1);
-        if (Number.isInteger(cachingAtDepth) && cachingAtDepth >= 0 && request.body.model.startsWith('anthropic/claude-3')) {
+        if (Number.isInteger(cachingAtDepth) && cachingAtDepth >= 0 && request.body.model?.startsWith('anthropic/claude-3')) {
             cachingAtDepthForOpenRouterClaude(request.body.messages, cachingAtDepth);
         }
     } else if (request.body.chat_completion_source === CHAT_COMPLETION_SOURCES.CUSTOM) {

@@ -1274,6 +1274,8 @@
     "sd_Raw_Last_Message": "生の最後のメッセージ",
     "sd_Background": "背景",
     "Image Generation": "画像生成",
+    "Stop Image Generation": "画像生成を停止",
+    "Generate Caption": "画像説明を生成",
     "sd_refine_mode": "プロンプトを生成 API に送信する前に手動で編集できるようにする",
     "sd_refine_mode_txt": "生成前にプロンプ​​トを編集する",
     "sd_interactive_mode": "「猫の写真を送ってください」のようなメッセージを送信するときに、画像を自動的に生成します。",
@@ -1439,5 +1441,8 @@
     "Still have questions?": "まだ質問がありますか？",
     "Join the SillyTavern Discord": "SillyTavernのDiscordに参加",
     "Post a GitHub issue": "GitHubの問題を投稿",
-    "Contact the developers": "開発者に連絡"
+    "Contact the developers": "開発者に連絡",
+    "Stop Inspecting": "検査を停止",
+    "Inspect Prompts": "プロンプトを検査",
+    "Toggle prompt inspection": "プロンプト検査の切り替え"
 }

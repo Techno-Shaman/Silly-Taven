@@ -1736,6 +1736,7 @@
                                             <div data-name="tfs_z" draggable="true"><span>Tail Free Sampling</span><small></small></div>
                                             <div data-name="min_p" draggable="true"><span>Min P</span><small></small></div>
                                             <div data-name="xtc" draggable="true"><span>Exclude Top Choices</span><small></small></div>
+                                            <div data-name="dry" draggable="true"><span>DRY</span><small></small></div>
                                         </div>
                                         <div id="llamacpp_samplers_default_order" class="menu_button menu_button_icon">
                                             <span data-i18n="Load default order">Load default order</span>
@@ -2616,7 +2617,7 @@
                                 </div>
                             </div>
                             <div class="flex-container flexFlowColumn marginTopBot5">
-                                <label data-tg-type="ooba" class="checkbox_label" for="bypass_status_check_textgenerationwebui">
+                                <label data-tg-type="ooba, generic" class="checkbox_label" for="bypass_status_check_textgenerationwebui">
                                     <input type="checkbox" id="bypass_status_check_textgenerationwebui" />
                                     <span data-i18n="Bypass status check">Bypass status check</span>
                                 </label>
@@ -3025,34 +3026,30 @@
                                     <optgroup label="Primary">
                                         <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
                                         <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
-                                        <option value="gemini-1.0-pro">Gemini 1.0 Pro</option>
-                                        <option value="gemini-pro">Gemini Pro (1.0)</option>
-                                        <option value="gemini-pro-vision">Gemini Pro Vision (1.0)</option>
+                                        <option value="gemini-1.0-pro">Gemini 1.0 Pro (Deprecated)</option>
+                                        <option value="gemini-pro">Gemini Pro (1.0) (Deprecated)</option>
                                         <option value="gemini-ultra">Gemini Ultra (1.0)</option>
                                         <option value="gemini-1.0-ultra-latest">Gemini 1.0 Ultra</option>
-                                        <option value="text-bison-001">PaLM 2 (Legacy)</option>
-                                        <option value="chat-bison-001">PaLM 2 Chat (Legacy)</option>
                                     </optgroup>
                                     <optgroup label="Subversions">
-                                        <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash Experiment</option>
+                                        <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash Experimental</option>
                                         <option value="gemini-exp-1114">Gemini Experimental 2024-11-14</option>
                                         <option value="gemini-exp-1121">Gemini Experimental 2024-11-21</option>
                                         <option value="gemini-exp-1206">Gemini Experimental 2024-12-06</option>
-                                        <option value="gemini-1.5-pro-exp-0801">Gemini 1.5 Pro Experiment 2024-08-01</option>
-                                        <option value="gemini-1.5-pro-exp-0827">Gemini 1.5 Pro Experiment 2024-08-27</option>
+                                        <option value="gemini-1.5-pro-exp-0801">Gemini 1.5 Pro Experimental 2024-08-01</option>
+                                        <option value="gemini-1.5-pro-exp-0827">Gemini 1.5 Pro Experimental 2024-08-27</option>
                                         <option value="gemini-1.5-pro-latest">Gemini 1.5 Pro [latest]</option>
                                         <option value="gemini-1.5-pro-001">Gemini 1.5 Pro [001]</option>
                                         <option value="gemini-1.5-pro-002">Gemini 1.5 Pro [002]</option>
                                         <option value="gemini-1.5-flash-8b">Gemini 1.5 Flash 8B</option>
-                                        <option value="gemini-1.5-flash-exp-0827">Gemini 1.5 Flash Experiment 2024-08-27</option>
-                                        <option value="gemini-1.5-flash-8b-exp-0827">Gemini 1.5 Flash 8B Experiment 2024-08-27</option>
-                                        <option value="gemini-1.5-flash-8b-exp-0924">Gemini 1.5 Flash 8B Experiment 2024-09-24</option>
+                                        <option value="gemini-1.5-flash-exp-0827">Gemini 1.5 Flash Experimental 2024-08-27</option>
+                                        <option value="gemini-1.5-flash-8b-exp-0827">Gemini 1.5 Flash 8B Experimental 2024-08-27</option>
+                                        <option value="gemini-1.5-flash-8b-exp-0924">Gemini 1.5 Flash 8B Experimental 2024-09-24</option>
                                         <option value="gemini-1.5-flash-latest">Gemini 1.5 Flash [latest]</option>
                                         <option value="gemini-1.5-flash-001">Gemini 1.5 Flash [001]</option>
                                         <option value="gemini-1.5-flash-002">Gemini 1.5 Flash [002]</option>
-                                        <option value="gemini-1.0-pro-latest">Gemini 1.0 Pro [latest]</option>
-                                        <option value="gemini-1.0-pro-001">Gemini 1.0 Pro (Tuning) [001]</option>
-                                        <option value="gemini-1.0-pro-vision-latest">Gemini 1.0 Pro Vision [latest]</option>
+                                        <option value="gemini-1.0-pro-latest">Gemini 1.0 Pro [latest] (Deprecated)</option>
+                                        <option value="gemini-1.0-pro-001">Gemini 1.0 Pro (Tuning) [001] (Deprecated)</option>
                                     </optgroup>
                                 </select>
                             </div>
@@ -3220,16 +3217,17 @@
                                 <h4 data-i18n="Cohere Model">Cohere Model</h4>
                                 <select id="model_cohere_select">
                                     <optgroup label="Stable">
-                                        <option value="c4ai-aya-expanse-32b">c4ai-aya-expanse-32b</option>
-                                        <option value="c4ai-aya-expanse-8b">c4ai-aya-expanse-8b</option>
-                                        <option value="c4ai-aya-23-35b">c4ai-aya-23-35b</option>
                                         <option value="c4ai-aya-23-8b">c4ai-aya-23-8b</option>
+                                        <option value="c4ai-aya-23">c4ai-aya-23</option>
+                                        <option value="c4ai-aya-expanse-8b">c4ai-aya-expanse-8b</option>
+                                        <option value="c4ai-aya-expanse-32b">c4ai-aya-expanse-32b</option>
                                         <option value="command-light">command-light</option>
                                         <option value="command">command</option>
                                         <option value="command-r">command-r</option>
                                         <option value="command-r-plus">command-r-plus</option>
                                         <option value="command-r-08-2024">command-r-08-2024</option>
                                         <option value="command-r-plus-08-2024">command-r-plus-08-2024</option>
+                                        <option value="command-r7b-12-2024">command-r7b-12-2024</option>
                                     </optgroup>
                                     <optgroup label="Nightly">
                                         <option value="command-light-nightly">command-light-nightly</option>

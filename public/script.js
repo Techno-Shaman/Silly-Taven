@@ -1173,7 +1173,7 @@ async function getStatusTextgen() {
         return resultCheckStatus();
     }
 
-    if (textgen_settings.type == textgen_types.OOBA && textgen_settings.bypass_status_check) {
+    if ([textgen_types.GENERIC, textgen_types.OOBA].includes(textgen_settings.type) && textgen_settings.bypass_status_check) {
         setOnlineStatus('Status check bypassed');
         return resultCheckStatus();
     }

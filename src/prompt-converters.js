@@ -333,8 +333,6 @@ export function convertCohereMessages(messages, charName = '', userName = '') {
  * @returns {{contents: *[], system_instruction: {parts: {text: string}}}} Prompt for Google MakerSuite models
  */
 export function convertGooglePrompt(messages, model, useSysPrompt = false, charName = '', userName = '') {
-    // This is a 1x1 transparent PNG
-    const PNG_PIXEL = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 
     const visionSupportedModels = [
         'gemini-2.0-flash-exp',
@@ -355,13 +353,6 @@ export function convertGooglePrompt(messages, model, useSysPrompt = false, charN
         'gemini-1.5-pro-002',
         'gemini-1.5-pro-exp-0801',
         'gemini-1.5-pro-exp-0827',
-        'gemini-1.0-pro-vision-latest',
-        'gemini-pro-vision',
-    ];
-
-    const dummyRequiredModels = [
-        'gemini-1.0-pro-vision-latest',
-        'gemini-pro-vision',
     ];
 
     const isMultimodal = visionSupportedModels.includes(model);
@@ -451,16 +442,6 @@ export function convertGooglePrompt(messages, model, useSysPrompt = false, charN
             });
         }
     });
-
-    // pro 1.5 doesn't require a dummy image to be attached, other vision models do
-    if (isMultimodal && dummyRequiredModels.includes(model) && !hasImage) {
-        contents[0].parts.push({
-            inlineData: {
-                mimeType: 'image/png',
-                data: PNG_PIXEL,
-            },
-        });
-    }
 
     return { contents: contents, system_instruction: system_instruction };
 }

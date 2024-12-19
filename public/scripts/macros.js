@@ -516,7 +516,11 @@ export function evaluateMacros(content, env, postProcessFn) {
             break;
         }
 
-        content = content.replace(macro.regex, (...args) => postProcessFn(macro.replace(...args)));
+        try {
+            content = content.replace(macro.regex, (...args) => postProcessFn(macro.replace(...args)));
+        } catch (e) {
+            console.warn(`Macro content can't be replaced: ${macro.regex} in ${content}`, e);
+        }
     }
 
     return content;

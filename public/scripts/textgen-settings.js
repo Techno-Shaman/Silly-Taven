@@ -55,6 +55,7 @@ const {
 } = textgen_types;
 
 const LLAMACPP_DEFAULT_ORDER = [
+    'dry',
     'top_k',
     'tfs_z',
     'typical_p',

@@ -4087,13 +4087,8 @@ async function onModelChange() {
             $('#openai_max_context').attr('max', max_2mil);
         } else if (value.includes('gemini-1.5-flash') || value.includes('gemini-2.0-flash-exp')) {
             $('#openai_max_context').attr('max', max_1mil);
-        } else if (value.includes('gemini-1.0-pro-vision') || value === 'gemini-pro-vision') {
-            $('#openai_max_context').attr('max', max_16k);
         } else if (value.includes('gemini-1.0-pro') || value === 'gemini-pro') {
             $('#openai_max_context').attr('max', max_32k);
-        } else if (value === 'text-bison-001') {
-            $('#openai_max_context').attr('max', max_8k);
-            // The ultra endpoints are possibly dead:
         } else if (value.includes('gemini-1.0-ultra') || value === 'gemini-ultra') {
             $('#openai_max_context').attr('max', max_32k);
         } else {
@@ -4215,16 +4210,13 @@ async function onModelChange() {
         if (oai_settings.max_context_unlocked) {
             $('#openai_max_context').attr('max', unlocked_max);
         }
-        else if (['command-light', 'command'].includes(oai_settings.cohere_model)) {
+        else if (['command-light-nightly', 'command-light', 'command'].includes(oai_settings.cohere_model)) {
             $('#openai_max_context').attr('max', max_4k);
         }
-        else if (['command-light-nightly', 'command-nightly'].includes(oai_settings.cohere_model)) {
-            $('#openai_max_context').attr('max', max_8k);
-        }
-        else if (oai_settings.cohere_model.includes('command-r') || ['c4ai-aya-expanse-32b'].includes(oai_settings.cohere_model)) {
+        else if (oai_settings.cohere_model.includes('command-r') || ['c4ai-aya-23', 'c4ai-aya-expanse-32b', 'command-nightly'].includes(oai_settings.cohere_model)) {
             $('#openai_max_context').attr('max', max_128k);
         }
-        else if (['c4ai-aya-23', 'c4ai-aya-expanse-8b'].includes(oai_settings.cohere_model)) {
+        else if (['c4ai-aya-23-8b', 'c4ai-aya-expanse-8b'].includes(oai_settings.cohere_model)) {
             $('#openai_max_context').attr('max', max_8k);
         }
         else {
@@ -4776,7 +4768,6 @@ export function isImageInliningSupported() {
         'gemini-1.5-pro-002',
         'gemini-1.5-pro-exp-0801',
         'gemini-1.5-pro-exp-0827',
-        'gemini-pro-vision',
         'claude-3',
         'claude-3-5',
         'gpt-4-turbo',
