@@ -10512,22 +10512,28 @@ jQuery(async function () {
     });
 
     $(document).on('click', '.extraMesButtonsHint', function (e) {
-        const elmnt = e.target;
-        $(elmnt).transition({
+        const $hint = $(e.target);
+        const $buttons = $hint.siblings('.extraMesButtons');
+
+        $hint.transition({
             opacity: 0,
             duration: animation_duration,
-            easing: 'ease-in-out',
+            easing: animation_easing,
+            complete: function () {
+                $hint.hide();
+                $buttons
+                    .addClass('visible')
+                    .css({
+                        opacity: 0,
+                        display: 'flex',
+                    })
+                    .transition({
+                        opacity: 1,
+                        duration: animation_duration,
+                        easing: animation_easing,
+                    });
+            },
         });
-        setTimeout(function () {
-            $(elmnt).hide();
-            $(elmnt).siblings('.extraMesButtons').css('opcacity', '0');
-            $(elmnt).siblings('.extraMesButtons').css('display', 'flex');
-            $(elmnt).siblings('.extraMesButtons').transition({
-                opacity: 1,
-                duration: animation_duration,
-                easing: 'ease-in-out',
-            });
-        }, animation_duration);
     });
 
     $(document).on('click', function (e) {
@@ -10538,23 +10544,36 @@ jQuery(async function () {
 
         // Check if the click was outside the relevant elements
         if (!$(e.target).closest('.extraMesButtons, .extraMesButtonsHint').length) {
+            const $visibleButtons = $('.extraMesButtons.visible');
+
+            if (!$visibleButtons.length) {
+                return;
+            }
+
+            const $hiddenHints = $('.extraMesButtonsHint:hidden');
+
             // Transition out the .extraMesButtons first
-            $('.extraMesButtons:visible').transition({
+            $visibleButtons.transition({
                 opacity: 0,
                 duration: animation_duration,
-                easing: 'ease-in-out',
+                easing: animation_easing,
                 complete: function () {
-                    $(this).hide(); // Hide the .extraMesButtons after the transition
+                    // Hide the .extraMesButtons after the transition
+                    $(this)
+                        .hide()
+                        .removeClass('visible');
 
                     // Transition the .extraMesButtonsHint back in
-                    $('.extraMesButtonsHint:not(:visible)').show().transition({
-                        opacity: .3,
-                        duration: animation_duration,
-                        easing: 'ease-in-out',
-                        complete: function () {
-                            $(this).css('opacity', '');
-                        },
-                    });
+                    $hiddenHints
+                        .show()
+                        .transition({
+                            opacity: 0.3,
+                            duration: animation_duration,
+                            easing: animation_easing,
+                            complete: function () {
+                                $(this).css('opacity', '');
+                            },
+                        });
                 },
             });
         }
