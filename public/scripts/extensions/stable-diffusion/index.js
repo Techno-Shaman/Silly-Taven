@@ -319,6 +319,7 @@ const defaultSettings = {
     wand_visible: false,
     command_visible: false,
     interactive_visible: false,
+    tool_visible: false,
 
     // Stability AI settings
     stability_style_preset: 'anime',
@@ -488,6 +489,7 @@ async function loadSettings() {
     $('#sd_wand_visible').prop('checked', extension_settings.sd.wand_visible);
     $('#sd_command_visible').prop('checked', extension_settings.sd.command_visible);
     $('#sd_interactive_visible').prop('checked', extension_settings.sd.interactive_visible);
+    $('#sd_tool_visible').prop('checked', extension_settings.sd.tool_visible);
     $('#sd_stability_style_preset').val(extension_settings.sd.stability_style_preset);
     $('#sd_huggingface_model_id').val(extension_settings.sd.huggingface_model_id);
     $('#sd_function_tool').prop('checked', extension_settings.sd.function_tool);
@@ -841,6 +843,11 @@ function onCommandVisibleInput() {
 
 function onInteractiveVisibleInput() {
     extension_settings.sd.interactive_visible = !!$('#sd_interactive_visible').prop('checked');
+    saveSettingsDebounced();
+}
+
+function onToolVisibleInput() {
+    extension_settings.sd.tool_visible = !!$('#sd_tool_visible').prop('checked');
     saveSettingsDebounced();
 }
 
@@ -3670,6 +3677,8 @@ function getVisibilityByInitiator(initiator) {
             return !!extension_settings.sd.wand_visible;
         case initiators.command:
             return !!extension_settings.sd.command_visible;
+        case initiators.tool:
+            return !!extension_settings.sd.tool_visible;
         default:
             return false;
     }
@@ -4417,6 +4426,7 @@ jQuery(async () => {
     $('#sd_wand_visible').on('input', onWandVisibleInput);
     $('#sd_command_visible').on('input', onCommandVisibleInput);
     $('#sd_interactive_visible').on('input', onInteractiveVisibleInput);
+    $('#sd_tool_visible').on('input', onToolVisibleInput);
     $('#sd_swap_dimensions').on('click', onSwapDimensionsClick);
     $('#sd_stability_key').on('click', onStabilityKeyClick);
     $('#sd_stability_style_preset').on('change', onStabilityStylePresetChange);
