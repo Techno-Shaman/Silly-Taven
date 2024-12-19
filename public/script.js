@@ -8114,8 +8114,9 @@ function addAlternateGreeting(template, greeting, index, getArray, popup) {
 /**
  * Creates or edits a character based on the form data.
  * @param {Event} [e] Event that triggered the function call.
+ * @param {Number} [exportType] The export type to use when editing a character.
  */
-async function createOrEditCharacter(e) {
+async function createOrEditCharacter(e, exportType) {
     $('#rm_info_avatar').html('');
     const formData = new FormData($('#form_create').get(0));
     formData.set('fav', String(fav_ch_checked));
@@ -8236,6 +8237,10 @@ async function createOrEditCharacter(e) {
                 for (const value of characters[chid].data.alternate_greetings) {
                     formData.append('alternate_greetings', value);
                 }
+            }
+            
+            if (exportType !== undefined) {
+                formData.append('exportType', exportType.toString());
             }
 
             const fetchResult = await fetch(url, {
@@ -10760,10 +10765,22 @@ jQuery(async function () {
             return;
         }
 
-        // Save before exporting
-        await createOrEditCharacter();
-        const body = { format, avatar_url: characters[this_chid].avatar };
+        const html = await renderTemplateAsync('exportFormat');
+        const exportValue = await callGenericPopup(html, POPUP_TYPE.CONFIRM, null, {okButton: 'Export as PromV3', customButtons: [t`Export as V2 + V3`], cancelButton: 'Cancel'}); 
+        if (!exportValue) {
+            return;
+        }
+        if (exportValue < 0 || exportValue > 2) {
+            toastr.error('Invalid export value');
+            return;
+        }
 
+        const useProm = exportValue === 1;
+
+        // Save with chosen format before exporting
+        await createOrEditCharacter(undefined, exportValue);
+
+        const body = { format, avatar_url: characters[this_chid].avatar, useProm: useProm };
         const response = await fetch('/api/characters/export', {
             method: 'POST',
             headers: getRequestHeaders(),

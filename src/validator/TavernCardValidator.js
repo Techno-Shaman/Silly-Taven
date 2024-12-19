@@ -32,16 +32,20 @@ export class TavernCardValidator {
     validate() {
         this.#lastValidationError = null;
 
-        if (this.validateV1()) {
-            return 1;
+        if (this.validatePromV3()) {
+            return 3.1;
+        }
+
+        if (this.validateV3()) {
+            return 3;
         }
 
         if (this.validateV2()) {
             return 2;
         }
 
-        if (this.validateV3()) {
-            return 3;
+        if (this.validateV1()) {
+            return 1;
         }
 
         return false;
@@ -83,6 +87,16 @@ export class TavernCardValidator {
         return this.#validateSpecV3()
             && this.#validateSpecVersionV3()
             && this.#validateDataV3();
+    }
+
+    /**
+     * Validate against PromV3 specification
+     * @returns {boolean}
+     */
+    validatePromV3() {
+        return this.#validatePromSpecV3()
+            && this.#validatePromSpecVersionV3()
+            && this.#validatePromDataV3();
     }
 
     #validateSpecV2() {
@@ -161,6 +175,33 @@ export class TavernCardValidator {
 
         if (!data || typeof data !== 'object') {
             this.#lastValidationError = 'No tavern card data found';
+            return false;
+        }
+
+        return true;
+    }
+
+    #validatePromSpecV3() {
+        if (this.card.type !== 'chara_card' && this.card.spec_version !== '3.1') {
+            this.#lastValidationError = 'spec';
+            return false;
+        }
+        return true;
+    }
+
+    #validatePromSpecVersionV3() {
+        if (this.card.spec_version !== '3.1') {
+            this.#lastValidationError = 'spec_version';
+            return false;
+        }
+        return true;
+    }
+
+    #validatePromDataV3() {
+        const data = this.card.data;
+
+        if (!data || typeof data !== 'object') {
+            this.#lastValidationError = 'No PromV3 data found';
             return false;
         }
 
