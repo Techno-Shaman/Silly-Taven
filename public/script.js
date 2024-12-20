@@ -550,6 +550,7 @@ let optionsPopper = Popper.createPopper(document.getElementById('options_button'
 let exportPopper = Popper.createPopper(document.getElementById('export_button'), document.getElementById('export_format_popup'), {
     placement: 'left',
 });
+let isExportPopupOpen = false;
 
 // Saved here for performance reasons
 const messageTemplate = $('#message_template .mes');
@@ -10781,8 +10782,9 @@ jQuery(async function () {
         }
     });
 
-    $('#export_button').on('click', function (e) {
-        $('#export_format_popup').toggle();
+    $('#export_button').on('click', function () {
+        isExportPopupOpen = !isExportPopupOpen;
+        $('#export_format_popup').toggle(isExportPopupOpen);
         exportPopper.update();
     });
 
@@ -10792,6 +10794,10 @@ jQuery(async function () {
         if (!format) {
             return;
         }
+
+        $('#export_format_popup').hide();
+        isExportPopupOpen = false;
+        exportPopper.update();
 
         // Save before exporting
         await createOrEditCharacter();
@@ -10814,9 +10820,6 @@ jQuery(async function () {
             URL.revokeObjectURL(a.href);
             document.body.removeChild(a);
         }
-
-
-        $('#export_format_popup').hide();
     });
     //**************************CHAT IMPORT EXPORT*************************//
     $('#chat_import_button').click(function () {
@@ -10895,10 +10898,12 @@ jQuery(async function () {
     $('html').on('touchstart mousedown', function (e) {
         var clickTarget = $(e.target);
 
-        if ($('#export_format_popup').is(':visible')
+        if (isExportPopupOpen
             && clickTarget.closest('#export_button').length == 0
             && clickTarget.closest('#export_format_popup').length == 0) {
             $('#export_format_popup').hide();
+            isExportPopupOpen = false;
+            exportPopper.update();
         }
 
         const forbiddenTargets = [
@@ -11099,14 +11104,6 @@ jQuery(async function () {
             case 'renameCharButton':
                 renameCharacter();
                 break;
-            /*case 'dupe_button':
-                DupeChar();
-                break;
-            case 'export_button':
-                $('#export_format_popup').toggle();
-                exportPopper.update();
-                break;
-            */
             case 'import_character_info':
                 await importEmbeddedWorldInfo();
                 saveCharacterDebounced();
