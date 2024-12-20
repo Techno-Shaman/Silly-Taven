@@ -10,6 +10,7 @@ import {
     SVGInject,
     Popper,
     initLibraryShims,
+    slideToggle,
     default as libs,
 } from './lib.js';
 
@@ -9217,45 +9218,43 @@ function doNavbarIconClick() {
     const pinnedDrawerClicked = drawer.hasClass('pinnedOpen');
 
     if (!drawerWasOpenAlready) { //to open the drawer
-        $('.openDrawer').not('.pinnedOpen').addClass('resizing').slideToggle({
-            duration: animation_duration * 1.5,
-            easing: 'swing',
-            queue: false,
-            complete: async function () {
-                await delay(50);
-                $(this).closest('.drawer-content').removeClass('resizing');
-            },
+        $('.openDrawer').not('.pinnedOpen').addClass('resizing').each((_, el) => {
+            slideToggle(el, {
+                miliseconds: animation_duration * 1.5,
+                transitionFunction: 'ease-in',
+                onAnimationEnd: function (el) {
+                    el.closest('.drawer-content').classList.remove('resizing');
+                },
+            });
         });
-        $('.openIcon').toggleClass('closedIcon openIcon');
+        $('.openIcon').not('.drawerPinnedOpen').toggleClass('closedIcon openIcon');
         $('.openDrawer').not('.pinnedOpen').toggleClass('closedDrawer openDrawer');
         icon.toggleClass('openIcon closedIcon');
         drawer.toggleClass('openDrawer closedDrawer');
 
         //console.log(targetDrawerID);
         if (targetDrawerID === 'right-nav-panel') {
-            $(this).closest('.drawer').find('.drawer-content').addClass('resizing').slideToggle({
-                duration: animation_duration * 1.5,
-                easing: 'swing',
-                queue: false,
-                start: function () {
-                    jQuery(this).css('display', 'flex'); //flex needed to make charlist scroll
-                },
-                complete: async function () {
-                    favsToHotswap();
-                    await delay(50);
-                    $(this).closest('.drawer-content').removeClass('resizing');
-                    $('#rm_print_characters_block').trigger('scroll');
-                },
+            $(this).closest('.drawer').find('.drawer-content').addClass('resizing').each((_, el) => {
+                slideToggle(el, {
+                    miliseconds: animation_duration * 1.5,
+                    transitionFunction: 'ease-in',
+                    elementDisplayStyle: 'flex',
+                    onAnimationEnd: function (el) {
+                        el.closest('.drawer-content').classList.remove('resizing');
+                        favsToHotswap();
+                        $('#rm_print_characters_block').trigger('scroll');
+                    },
+                });
             });
         } else {
-            $(this).closest('.drawer').find('.drawer-content').addClass('resizing').slideToggle({
-                duration: animation_duration * 1.5,
-                easing: 'swing',
-                queue: false,
-                complete: async function () {
-                    await delay(50);
-                    $(this).closest('.drawer-content').removeClass('resizing');
-                },
+            $(this).closest('.drawer').find('.drawer-content').addClass('resizing').each((_, el) => {
+                slideToggle(el, {
+                    miliseconds: animation_duration * 1.5,
+                    transitionFunction: 'ease-in',
+                    onAnimationEnd: function (el) {
+                        el.closest('.drawer-content').classList.remove('resizing');
+                    },
+                });
             });
         }
 
@@ -9271,25 +9270,25 @@ function doNavbarIconClick() {
         icon.toggleClass('closedIcon openIcon');
 
         if (pinnedDrawerClicked) {
-            $(drawer).addClass('resizing').slideToggle({
-                duration: animation_duration * 1.5,
-                easing: 'swing',
-                queue: false,
-                complete: async function () {
-                    await delay(50);
-                    $(this).removeClass('resizing');
-                },
+            $(drawer).addClass('resizing').each((_, el) => {
+                slideToggle(el, {
+                    miliseconds: animation_duration * 1.5,
+                    transitionFunction: 'ease-in',
+                    onAnimationEnd: function (el) {
+                        el.classList.remove('resizing');
+                    },
+                });
             });
         }
         else {
-            $('.openDrawer').not('.pinnedOpen').addClass('resizing').slideToggle({
-                duration: animation_duration * 1.5,
-                easing: 'swing',
-                queue: false,
-                complete: async function () {
-                    await delay(50);
-                    $(this).closest('.drawer-content').removeClass('resizing');
-                },
+            $('.openDrawer').not('.pinnedOpen').addClass('resizing').each((_, el) => {
+                slideToggle(el, {
+                    miliseconds: animation_duration * 1.5,
+                    transitionFunction: 'ease-in',
+                    onAnimationEnd: function (el) {
+                        el.closest('.drawer-content').classList.remove('resizing');
+                    },
+                });
             });
         }
 
@@ -10924,12 +10923,17 @@ jQuery(async function () {
             if ($('.openDrawer').length !== 0) {
                 if (targetParentHasOpenDrawer === 0) {
                     //console.log($('.openDrawer').not('.pinnedOpen').length);
-                    $('.openDrawer').not('.pinnedOpen').addClass('resizing').slideToggle(200, 'swing', function () {
-                        $(this).closest('.drawer-content').removeClass('resizing');
+                    $('.openDrawer').not('.pinnedOpen').addClass('resizing').each((_, el) => {
+                        slideToggle(el, {
+                            miliseconds: 200,
+                            transitionFunction: 'ease-in',
+                            onAnimationEnd: (el) => {
+                                el.closest('.drawer-content').classList.remove('resizing');
+                            },
+                        });
                     });
                     $('.openIcon').not('.drawerPinnedOpen').toggleClass('closedIcon openIcon');
                     $('.openDrawer').not('.pinnedOpen').toggleClass('closedDrawer openDrawer');
-
                 }
             }
         }

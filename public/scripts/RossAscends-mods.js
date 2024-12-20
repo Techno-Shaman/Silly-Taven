@@ -1,4 +1,4 @@
-import { DOMPurify, Bowser } from '../lib.js';
+import { DOMPurify, Bowser, slideToggle } from '../lib.js';
 
 import {
     characters,
@@ -19,6 +19,7 @@ import {
     menu_type,
     substituteParams,
     sendTextareaMessage,
+    animation_duration,
 } from '../script.js';
 
 import {
@@ -748,8 +749,8 @@ export function initRossMods() {
             $(RightNavDrawerIcon).removeClass('drawerPinnedOpen');
 
             if ($(RightNavPanel).hasClass('openDrawer') && $('.openDrawer').length > 1) {
-                $(RightNavPanel).slideToggle(200, 'swing');
-                $(RightNavDrawerIcon).toggleClass('openIcon closedIcon');
+                slideToggle(RightNavPanel, { miliseconds: animation_duration * 1.5, transitionFunction: 'ease-in' });
+                $(RightNavDrawerIcon).toggleClass('closedIcon openIcon');
                 $(RightNavPanel).toggleClass('openDrawer closedDrawer');
             }
         }
@@ -766,8 +767,8 @@ export function initRossMods() {
             $(LeftNavDrawerIcon).removeClass('drawerPinnedOpen');
 
             if ($(LeftNavPanel).hasClass('openDrawer') && $('.openDrawer').length > 1) {
-                $(LeftNavPanel).slideToggle(200, 'swing');
-                $(LeftNavDrawerIcon).toggleClass('openIcon closedIcon');
+                slideToggle(LeftNavPanel, { miliseconds: animation_duration * 1.5, transitionFunction: 'ease-in' });
+                $(LeftNavDrawerIcon).toggleClass('closedIcon openIcon');
                 $(LeftNavPanel).toggleClass('openDrawer closedDrawer');
             }
         }
@@ -786,8 +787,8 @@ export function initRossMods() {
 
             if ($(WorldInfo).hasClass('openDrawer') && $('.openDrawer').length > 1) {
                 console.debug('closing WI after lock removal');
-                $(WorldInfo).slideToggle(200, 'swing');
-                $(WIDrawerIcon).toggleClass('openIcon closedIcon');
+                slideToggle(WorldInfo, { miliseconds: animation_duration * 1.5, transitionFunction: 'ease-in' });
+                $(WIDrawerIcon).toggleClass('closedIcon openIcon');
                 $(WorldInfo).toggleClass('openDrawer closedDrawer');
             }
         }
