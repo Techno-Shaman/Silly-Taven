@@ -19,7 +19,7 @@ import {
     menu_type,
     substituteParams,
     sendTextareaMessage,
-    animation_duration,
+    getSlideToggleOptions,
 } from '../script.js';
 
 import {
@@ -749,7 +749,7 @@ export function initRossMods() {
             $(RightNavDrawerIcon).removeClass('drawerPinnedOpen');
 
             if ($(RightNavPanel).hasClass('openDrawer') && $('.openDrawer').length > 1) {
-                slideToggle(RightNavPanel, { miliseconds: animation_duration * 1.5, transitionFunction: 'ease-in' });
+                slideToggle(RightNavPanel, getSlideToggleOptions());
                 $(RightNavDrawerIcon).toggleClass('closedIcon openIcon');
                 $(RightNavPanel).toggleClass('openDrawer closedDrawer');
             }
@@ -767,7 +767,7 @@ export function initRossMods() {
             $(LeftNavDrawerIcon).removeClass('drawerPinnedOpen');
 
             if ($(LeftNavPanel).hasClass('openDrawer') && $('.openDrawer').length > 1) {
-                slideToggle(LeftNavPanel, { miliseconds: animation_duration * 1.5, transitionFunction: 'ease-in' });
+                slideToggle(LeftNavPanel, getSlideToggleOptions());
                 $(LeftNavDrawerIcon).toggleClass('closedIcon openIcon');
                 $(LeftNavPanel).toggleClass('openDrawer closedDrawer');
             }
@@ -787,7 +787,7 @@ export function initRossMods() {
 
             if ($(WorldInfo).hasClass('openDrawer') && $('.openDrawer').length > 1) {
                 console.debug('closing WI after lock removal');
-                slideToggle(WorldInfo, { miliseconds: animation_duration * 1.5, transitionFunction: 'ease-in' });
+                slideToggle(WorldInfo, getSlideToggleOptions());
                 $(WIDrawerIcon).toggleClass('closedIcon openIcon');
                 $(WorldInfo).toggleClass('openDrawer closedDrawer');
             }

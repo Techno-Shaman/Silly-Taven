@@ -897,6 +897,13 @@ export function getRequestHeaders() {
     };
 }
 
+export function getSlideToggleOptions() {
+    return {
+        miliseconds: animation_duration * 1.5,
+        transitionFunction: animation_duration > 0 ? 'ease-in' : 'step-start',
+    };
+}
+
 $.ajaxPrefilter((options, originalOptions, xhr) => {
     xhr.setRequestHeader('X-CSRF-Token', token);
 });
@@ -9221,8 +9228,7 @@ function doNavbarIconClick() {
     if (!drawerWasOpenAlready) { //to open the drawer
         $('.openDrawer').not('.pinnedOpen').addClass('resizing').each((_, el) => {
             slideToggle(el, {
-                miliseconds: animation_duration * 1.5,
-                transitionFunction: 'ease-in',
+                ...getSlideToggleOptions(),
                 onAnimationEnd: function (el) {
                     el.closest('.drawer-content').classList.remove('resizing');
                 },
@@ -9237,8 +9243,7 @@ function doNavbarIconClick() {
         if (targetDrawerID === 'right-nav-panel') {
             $(this).closest('.drawer').find('.drawer-content').addClass('resizing').each((_, el) => {
                 slideToggle(el, {
-                    miliseconds: animation_duration * 1.5,
-                    transitionFunction: 'ease-in',
+                    ...getSlideToggleOptions(),
                     elementDisplayStyle: 'flex',
                     onAnimationEnd: function (el) {
                         el.closest('.drawer-content').classList.remove('resizing');
@@ -9250,8 +9255,7 @@ function doNavbarIconClick() {
         } else {
             $(this).closest('.drawer').find('.drawer-content').addClass('resizing').each((_, el) => {
                 slideToggle(el, {
-                    miliseconds: animation_duration * 1.5,
-                    transitionFunction: 'ease-in',
+                    ...getSlideToggleOptions(),
                     onAnimationEnd: function (el) {
                         el.closest('.drawer-content').classList.remove('resizing');
                     },
@@ -9273,8 +9277,7 @@ function doNavbarIconClick() {
         if (pinnedDrawerClicked) {
             $(drawer).addClass('resizing').each((_, el) => {
                 slideToggle(el, {
-                    miliseconds: animation_duration * 1.5,
-                    transitionFunction: 'ease-in',
+                    ...getSlideToggleOptions(),
                     onAnimationEnd: function (el) {
                         el.classList.remove('resizing');
                     },
@@ -9284,8 +9287,7 @@ function doNavbarIconClick() {
         else {
             $('.openDrawer').not('.pinnedOpen').addClass('resizing').each((_, el) => {
                 slideToggle(el, {
-                    miliseconds: animation_duration * 1.5,
-                    transitionFunction: 'ease-in',
+                    ...getSlideToggleOptions(),
                     onAnimationEnd: function (el) {
                         el.closest('.drawer-content').classList.remove('resizing');
                     },
@@ -10930,8 +10932,7 @@ jQuery(async function () {
                     //console.log($('.openDrawer').not('.pinnedOpen').length);
                     $('.openDrawer').not('.pinnedOpen').addClass('resizing').each((_, el) => {
                         slideToggle(el, {
-                            miliseconds: 200,
-                            transitionFunction: 'ease-in',
+                            ...getSlideToggleOptions(),
                             onAnimationEnd: (el) => {
                                 el.closest('.drawer-content').classList.remove('resizing');
                             },
