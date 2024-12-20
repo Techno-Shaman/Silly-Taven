@@ -900,7 +900,7 @@ export function getRequestHeaders() {
 export function getSlideToggleOptions() {
     return {
         miliseconds: animation_duration * 1.5,
-        transitionFunction: animation_duration > 0 ? 'ease-in' : 'step-start',
+        transitionFunction: animation_duration > 0 ? 'ease-in-out' : 'step-start',
     };
 }
 
