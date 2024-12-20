@@ -1,4 +1,4 @@
-import { DOMPurify, Bowser, slideToggle } from '../lib.js';
+import { DOMPurify, Bowser } from '../lib.js';
 
 import {
     characters,
@@ -747,12 +747,6 @@ export function initRossMods() {
             //console.log('removing pin class from right nav');
             $(RightNavPanel).removeClass('pinnedOpen');
             $(RightNavDrawerIcon).removeClass('drawerPinnedOpen');
-
-            if ($(RightNavPanel).hasClass('openDrawer') && $('.openDrawer').length > 1) {
-                slideToggle(RightNavPanel, { miliseconds: animation_duration * 1.5, transitionFunction: 'ease-in' });
-                $(RightNavDrawerIcon).toggleClass('closedIcon openIcon');
-                $(RightNavPanel).toggleClass('openDrawer closedDrawer');
-            }
         }
     });
     $(LPanelPin).on('click', function () {
@@ -765,12 +759,6 @@ export function initRossMods() {
             //console.log('removing pin class from Left nav');
             $(LeftNavPanel).removeClass('pinnedOpen');
             $(LeftNavDrawerIcon).removeClass('drawerPinnedOpen');
-
-            if ($(LeftNavPanel).hasClass('openDrawer') && $('.openDrawer').length > 1) {
-                slideToggle(LeftNavPanel, { miliseconds: animation_duration * 1.5, transitionFunction: 'ease-in' });
-                $(LeftNavDrawerIcon).toggleClass('closedIcon openIcon');
-                $(LeftNavPanel).toggleClass('openDrawer closedDrawer');
-            }
         }
     });
 
@@ -784,13 +772,6 @@ export function initRossMods() {
             console.debug('removing pin class from WI');
             $(WorldInfo).removeClass('pinnedOpen');
             $(WIDrawerIcon).removeClass('drawerPinnedOpen');
-
-            if ($(WorldInfo).hasClass('openDrawer') && $('.openDrawer').length > 1) {
-                console.debug('closing WI after lock removal');
-                slideToggle(WorldInfo, { miliseconds: animation_duration * 1.5, transitionFunction: 'ease-in' });
-                $(WIDrawerIcon).toggleClass('closedIcon openIcon');
-                $(WorldInfo).toggleClass('openDrawer closedDrawer');
-            }
         }
     });
 
