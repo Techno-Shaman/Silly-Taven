@@ -10894,8 +10894,7 @@ jQuery(async function () {
 
     $(document).on('click', '.drawer-opener', doDrawerOpenClick);
 
-    // Animation will be executed on the next frame after all other click events
-    $('.drawer-toggle').on('click', function () { requestAnimationFrame(doNavbarIconClick.bind(this)); });
+    $('.drawer-toggle').on('click', doNavbarIconClick);
 
     $('html').on('touchstart mousedown', function (e) {
         var clickTarget = $(e.target);
