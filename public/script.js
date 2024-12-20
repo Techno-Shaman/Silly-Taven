@@ -1232,7 +1232,7 @@ async function getStatusTextgen() {
             setOnlineStatus(textgen_settings.tabby_model || data?.result);
         } else if (textgen_settings.type === textgen_types.GENERIC) {
             loadGenericModels(data?.data);
-            setOnlineStatus(textgen_settings.generic_model || 'Connected');
+            setOnlineStatus(textgen_settings.generic_model || data?.result || 'Connected');
         } else {
             setOnlineStatus(data?.result);
         }
