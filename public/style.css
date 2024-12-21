@@ -1163,6 +1163,22 @@ body.swipeAllMessages .mes:not(.last_mes) .swipes-counter {
     max-height: calc(var(--avatar-base-height) + 2 * var(--avatar-base-border-radius));
 }
 
+.hotswap.avatars_inline {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-right: 30px;
+    scroll-behavior: smooth;
+    max-height: calc(var(--avatar-base-height) + 2 * var(--avatar-base-border-radius));
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.hotswap.avatars_inline::-webkit-scrollbar {
+    display: none;
+}
+
 .bogus_folder_select .avatar {
     justify-content: center;
     background-color: var(--SmartThemeBlurTintColor);
