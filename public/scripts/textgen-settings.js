@@ -1042,11 +1042,27 @@ export function parseTextgenLogprobs(token, logprobs) {
             if (!logprobs?.length) {
                 return null;
             }
-            const candidates = logprobs?.[0]?.probs?.map(x => [x.tok_str, x.prob]);
-            if (!candidates) {
-                return null;
+
+            // 3 cases:
+            // 1. Before commit 6c5bc06, "probs" key with "tok_str"/"prob", and probs are [0, 1] so use them directly.
+            // 2. After commit 6c5bc06 but before commit 89d604f broke logprobs (they all return the first token's logprobs)
+            //    We don't know the llama.cpp version so we can't do much about this.
+            // 3. After commit 89d604f uses OpenAI-compatible format with "completion_probabilities" and "token"/"logprob" keys.
+            //    Note that it is also the *actual* logprob (negative number), so we need to convert to [0, 1].
+            if (logprobs?.[0]?.probs) {
+                const candidates = logprobs?.[0]?.probs?.map(x => [x.tok_str, x.prob]);
+                if (!candidates) {
+                    return null;
+                }
+                return { token, topLogprobs: candidates };
+            } else if (logprobs?.[0].top_logprobs) {
+                const candidates = logprobs?.[0]?.top_logprobs?.map(x => [x.token, Math.exp(x.logprob)]);
+                if (!candidates) {
+                    return null;
+                }
+                return { token, topLogprobs: candidates };
             }
-            return { token, topLogprobs: candidates };
+            return null;
         }
         default:
             return null;
