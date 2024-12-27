@@ -7,9 +7,11 @@ cardsCacheCapacity: 100
 # Listen for incoming connections
 listen: false
 # Enables IPv6 and/or IPv4 protocols. Need to have at least one enabled!
+# - Use option "auto" to automatically detect support
+# - Use true or false (no qoutes) to enable or disable each protocol
 protocol:
-    ipv4: true
-    ipv6: false
+    ipv4: auto
+    ipv6: auto
 # Prefers IPv6 for DNS. Enable this on ISPs that don't have issues with IPv6
 dnsPreferIPv6: false
 # The hostname that autorun opens.
